@@ -61,7 +61,7 @@ After installing on an iPhone:
 - The Distance widget can be added to the Lock Screen.
 - The Partner Photo widget appears in the widget picker.
 - Both widgets can be placed on the Home Screen.
-- The Partner Photo widget renders its test image.
+- The Partner Photo widget renders the cached synced image, or the bundled test image before any partner photo has synced.
 - SideStore refresh does not break the app or widgets.
 
 Run the same checks on both Sohaib's and Fajr's iPhones.

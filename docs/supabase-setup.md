@@ -15,7 +15,7 @@ Supabase's Swift client initializes with the Project URL and publishable key. Su
 ## 2. Run Schema
 
 1. Open Supabase SQL Editor.
-2. Paste and run [supabase-schema.sql](supabase-schema.sql). Sohaib ran this already.
+2. Paste and run [supabase-schema.sql](supabase-schema.sql). Run it again after pulling the photo-sync changes so the new photo transfer fields, update policy, and storage delete policy are present.
 3. Confirm these tables exist:
    - `profiles`
    - `couples`
@@ -41,16 +41,22 @@ For just Sohaib and Fajr, start with Supabase email OTP / magic link:
 
 Phone OTP is possible later, but email OTP is easier to start with.
 
-## 4. Local iOS Config
-
-The repo now includes placeholder keys in `ios/Together/Info.plist`:
+In Supabase Auth settings, add this redirect URL before testing magic links on iPhone:
 
 ```text
-SUPABASE_URL = YOUR_SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY = YOUR_SUPABASE_PUBLISHABLE_KEY
+together://auth-callback
 ```
 
-Before a real synced build, replace those placeholders locally in Xcode or with a local `.xcconfig` file that is not committed.
+The iOS app registers the `together://` URL scheme and sends magic links with that redirect URL.
+
+## 4. Local iOS Config
+
+The repo now includes Supabase keys in `ios/Together/Info.plist`:
+
+```text
+SUPABASE_URL = https://lwiedqlmzddwxhivubfa.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_...
+```
 
 Safe to commit:
 
@@ -64,17 +70,20 @@ Never commit:
 - JWT secret
 - personal email OTP links
 
-## 5. First Manual Seed
+## 5. Pair Sohaib and Fajr
 
-For the first real test, do this manually in Supabase after both accounts have logged in once:
+The app now includes a pair-code setup path after sign-in:
 
-1. Find Sohaib's auth user ID in Supabase Auth.
-2. Find Fajr's auth user ID.
-3. Insert one row in `couples`.
-4. Insert two rows in `couple_members`.
-5. Insert two rows in `profiles`.
+1. Sohaib signs in with email.
+2. Sohaib enters `SOHAIB-FAJR-2026`.
+3. Sohaib taps `I am Sohaib`.
+4. Fajr signs in with email.
+5. Fajr enters `SOHAIB-FAJR-2026`.
+6. Fajr taps `I am Fajr`.
 
-Example values:
+That calls `setup_together_member`, which creates or joins the couple, creates the profile, and inserts the membership row.
+
+You can still seed manually if needed:
 
 ```sql
 insert into public.couples (id, name, pair_code)
@@ -99,3 +108,46 @@ Next implementation steps:
 5. Sync messages.
 6. Upload selected/taken photos to `partner-photos`.
 7. Save the latest synced distance/photo/message into App Group cache for widgets.
+
+## 7. Live Distance Requirements
+
+Live distance works after:
+
+1. Sohaib and Fajr both sign in.
+2. Both auth users are present in `couple_members`.
+3. Each phone grants location permission.
+4. Each phone taps `Sync Now` at least once.
+
+The app uploads only the current user's own location row. It then reads both rows, calculates distance on device, and writes the latest distance into App Group cache for the widgets.
+
+For battery efficiency, the app uses:
+
+- one-shot location requests for manual refresh
+- `startMonitoringSignificantLocationChanges()` for background-friendly updates
+- a 500 meter distance filter
+- cached widget rendering instead of direct widget network calls
+
+## 8. Photo Sync Requirements
+
+The native iOS app now includes the first real Partner Photo sync path:
+
+1. Open `Partner Photo` from the app, or tap the Partner Photo widget.
+2. Choose `Take Picture` or `Upload Photo`.
+3. The app compresses the image to JPEG.
+4. The app uploads the temporary transfer file to:
+
+```text
+partner-photos/{couple_id}/{user_id}/{photo_id}.jpg
+```
+
+5. The app inserts a lightweight row in `photos`.
+6. The partner opens the app/photo screen or taps `Refresh`.
+7. The partner downloads the latest photo where `sender_user_id` is not their own user id.
+8. The app caches that image in App Group storage so the widget can show it locally.
+9. The app asks for Photos add permission and saves the received photo to the iPhone Photos app once.
+10. The app marks `receiver_saved_at` after the save succeeds.
+11. Cleanup deletes the temporary Supabase Storage file after `receiver_saved_at` is at least 24 hours old, then marks `storage_deleted_at`.
+
+The `photos` database row stays as small history/metadata. The full image is meant to live permanently on the receiver's iPhone after it is saved to Photos, not in Supabase.
+
+Widgets do not call Supabase directly. The Partner Photo widget reads the locally cached App Group image first, then falls back to the bundled test image.

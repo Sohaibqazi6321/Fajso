@@ -4,6 +4,7 @@ import Supabase
 enum TogetherSupabaseConfig {
     private static let placeholderURL = "YOUR_SUPABASE_URL"
     private static let placeholderKey = "YOUR_SUPABASE_PUBLISHABLE_KEY"
+    static let authRedirectURL = URL(string: "together://auth-callback")!
 
     static var supabaseURLString: String {
         Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String ?? placeholderURL
@@ -30,5 +31,9 @@ enum TogetherSupabaseConfig {
         }
 
         return SupabaseClient(supabaseURL: url, supabaseKey: publishableKey)
+    }
+
+    static func handleOpenURL(_ url: URL) {
+        makeClient()?.auth.handle(url)
     }
 }

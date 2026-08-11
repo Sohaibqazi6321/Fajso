@@ -35,7 +35,7 @@ struct TogetherLocationRecord: Codable, Sendable {
     let latitude: Double
     let longitude: Double
     let accuracyMeters: Double?
-    let updatedAt: Date
+    let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
         case coupleId = "couple_id"
@@ -44,6 +44,18 @@ struct TogetherLocationRecord: Codable, Sendable {
         case longitude
         case accuracyMeters = "accuracy_meters"
         case updatedAt = "updated_at"
+    }
+}
+
+struct TogetherMembershipRecord: Codable, Sendable {
+    let coupleId: UUID
+    let userId: UUID
+    let role: TogetherRole
+
+    enum CodingKeys: String, CodingKey {
+        case coupleId = "couple_id"
+        case userId = "user_id"
+        case role
     }
 }
 
@@ -68,13 +80,31 @@ struct TogetherPhotoRecord: Codable, Identifiable, Sendable {
     let coupleId: UUID
     let senderUserId: UUID
     let storagePath: String
-    let createdAt: Date
+    let receiverSavedAt: String?
+    let storageDeletedAt: String?
+    let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case id
         case coupleId = "couple_id"
         case senderUserId = "sender_user_id"
         case storagePath = "storage_path"
+        case receiverSavedAt = "receiver_saved_at"
+        case storageDeletedAt = "storage_deleted_at"
         case createdAt = "created_at"
+    }
+}
+
+struct TogetherPhotoInsert: Encodable {
+    let id: UUID
+    let coupleId: UUID
+    let senderUserId: UUID
+    let storagePath: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case coupleId = "couple_id"
+        case senderUserId = "sender_user_id"
+        case storagePath = "storage_path"
     }
 }

@@ -4,20 +4,20 @@ import UIKit
 
 struct PartnerPhotoEntry: TimelineEntry {
     let date: Date
-    let cachedDate: Date?
+    let snapshot: TogetherPartnerPhotoSnapshot
 }
 
 struct PartnerPhotoProvider: TimelineProvider {
     func placeholder(in context: Context) -> PartnerPhotoEntry {
-        PartnerPhotoEntry(date: Date(), cachedDate: nil)
+        PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
     }
 
     func getSnapshot(in context: Context, completion: @escaping (PartnerPhotoEntry) -> Void) {
-        completion(PartnerPhotoEntry(date: Date(), cachedDate: TogetherDemo.cachedDemoDate()))
+        completion(PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PartnerPhotoEntry>) -> Void) {
-        let entry = PartnerPhotoEntry(date: Date(), cachedDate: TogetherDemo.cachedDemoDate())
+        let entry = PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
         completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(60 * 30))))
     }
 }
@@ -27,7 +27,7 @@ struct PartnerPhotoWidgetView: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            testImage
+            widgetImage
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,17 +51,21 @@ struct PartnerPhotoWidgetView: View {
             .padding(12)
         }
         .containerBackground(.black, for: .widget)
+        .widgetURL(URL(string: "together://photo"))
     }
 
     private var statusText: String {
-        guard let cachedDate = entry.cachedDate else {
-            return "Test Photo"
-        }
-
-        return "Shared cache OK - \(cachedDate.formatted(date: .omitted, time: .shortened))"
+        entry.snapshot.statusText
     }
 
-    private var testImage: Image {
+    private var widgetImage: Image {
+        if
+            let data = entry.snapshot.data,
+            let image = UIImage(data: data)
+        {
+            return Image(uiImage: image)
+        }
+
         guard
             let data = Data(base64Encoded: TogetherDemo.testPhotoBase64),
             let image = UIImage(data: data)
@@ -89,5 +93,5 @@ struct PartnerPhotoWidget: Widget {
 #Preview(as: .systemMedium) {
     PartnerPhotoWidget()
 } timeline: {
-    PartnerPhotoEntry(date: Date(), cachedDate: Date())
+    PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
 }

@@ -2,16 +2,16 @@
 
 Together is a private iPhone app for Sohaib and Fajr.
 
-Phase 1 is a sideloading proof of concept:
+The app now has the first real synced build path:
 
 - Test the working Windows prototype first.
 - Install the app privately on two iPhones.
 - Show a Distance widget on the Home Screen and Lock Screen.
-- Show a Partner Photo widget.
+- Show a Partner Photo widget that reads the latest cached synced photo, with a bundled fallback image.
 - Keep both widgets in one WidgetKit extension.
-- Avoid backend, camera, authentication, and real location sharing until sideloading is proven.
+- Use Supabase for accounts, pairing, live distance rows, and temporary partner-photo transfer storage.
 
-The project is currently prepared for a Windows-first workflow. Most source edits can happen here, then GitHub Actions or a Mac with Xcode handles the native iOS build, signing, and sideloading tests.
+The project is currently prepared for a Windows-first workflow. Most source edits can happen here, GitHub Actions checks the iOS build on macOS, and SideStore/Xcode handles signed device installs.
 
 Start here:
 

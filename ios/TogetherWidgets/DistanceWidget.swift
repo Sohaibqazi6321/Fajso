@@ -3,19 +3,20 @@ import SwiftUI
 
 struct DistanceEntry: TimelineEntry {
     let date: Date
+    let snapshot: TogetherDistanceSnapshot
 }
 
 struct DistanceProvider: TimelineProvider {
     func placeholder(in context: Context) -> DistanceEntry {
-        DistanceEntry(date: Date())
+        DistanceEntry(date: Date(), snapshot: TogetherDemo.liveDistance())
     }
 
     func getSnapshot(in context: Context, completion: @escaping (DistanceEntry) -> Void) {
-        completion(DistanceEntry(date: Date()))
+        completion(DistanceEntry(date: Date(), snapshot: TogetherDemo.liveDistance()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DistanceEntry>) -> Void) {
-        let entry = DistanceEntry(date: Date())
+        let entry = DistanceEntry(date: Date(), snapshot: TogetherDemo.liveDistance())
         completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(60 * 30))))
     }
 }
@@ -27,14 +28,16 @@ struct DistanceWidgetView: View {
     var body: some View {
         switch family {
         case .accessoryInline:
-            Label(TogetherDemo.distanceText, systemImage: "heart.fill")
+            Label(entry.snapshot.text, systemImage: "heart.fill")
         case .accessoryCircular:
             VStack(spacing: 2) {
                 Image(systemName: "heart.fill")
                     .font(.caption.bold())
 
-                Text("7,846")
+                Text(entry.snapshot.lockCircleValue)
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
 
                 Text("mi")
                     .font(.caption2.weight(.bold))
@@ -45,7 +48,7 @@ struct DistanceWidgetView: View {
                 Label(TogetherDemo.coupleName, systemImage: "heart.fill")
                     .font(.caption.weight(.bold))
 
-                Text(TogetherDemo.distanceText)
+                Text(entry.snapshot.text)
                     .font(.headline.weight(.heavy))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -69,12 +72,12 @@ struct DistanceWidgetView: View {
 
             Spacer(minLength: 4)
 
-            Text(TogetherDemo.distanceText)
+            Text(entry.snapshot.text)
                 .font(.title2.bold())
                 .minimumScaleFactor(0.75)
                 .lineLimit(2)
 
-            Text("Phase 1 test")
+            Text(entry.snapshot.statusText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -99,11 +102,11 @@ struct DistanceWidget: Widget {
 #Preview(as: .systemSmall) {
     DistanceWidget()
 } timeline: {
-    DistanceEntry(date: Date())
+    DistanceEntry(date: Date(), snapshot: TogetherDemo.liveDistance())
 }
 
 #Preview(as: .accessoryRectangular) {
     DistanceWidget()
 } timeline: {
-    DistanceEntry(date: Date())
+    DistanceEntry(date: Date(), snapshot: TogetherDemo.liveDistance())
 }

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Prove that Together can be installed privately on Sohaib's and Fajr's iPhones using free development signing and SideStore before building the full backend, location, camera, or photo-sync systems.
+Prove that Together can be installed privately on Sohaib's and Fajr's iPhones using free development signing and SideStore, then verify the real Supabase sync pieces on both phones.
 
 ## Build Contents
 
@@ -14,10 +14,10 @@ The Phase 1 app contains:
   - Distance Widget for Home Screen and Lock Screen
   - Partner Photo Widget
 
-The widgets use hardcoded demo data:
+The widgets use local App Group cache data:
 
-- Distance: `Sohaib + Fajr`, `7,846 mi apart`
-- Partner photo: a bundled valid PNG test image with a small `Together` overlay
+- Distance: live synced distance when both phones have reported location, otherwise demo fallback text.
+- Partner photo: latest cached partner photo, otherwise a bundled valid PNG test image with a small `Together` overlay.
 
 ## SideStore Test Order
 
@@ -43,12 +43,16 @@ Test on Sohaib's iPhone first.
 7. Place both widgets on the Home Screen.
 8. Add the Distance Widget to the Lock Screen.
 9. Confirm the Lock Screen distance layouts appear in inline, circular, or rectangular form.
-10. Confirm the Partner Photo Widget renders its test image.
+10. Confirm the Partner Photo Widget renders its fallback test image before sync.
 11. Use the app's "Write Demo Cache" button.
 12. Confirm the app writes to the shared App Group container successfully.
-13. Refresh/re-sign Together with SideStore.
-14. Confirm Together still launches after refresh.
-15. Confirm existing Home Screen and Lock Screen widgets still render after refresh.
+13. Sign in and pair both phones.
+14. Upload or take a partner photo on one phone.
+15. Refresh the other phone and confirm the widget renders the synced photo.
+16. Confirm the received photo is saved to the receiver's Photos app after permission is granted.
+17. Refresh/re-sign Together with SideStore.
+18. Confirm Together still launches after refresh.
+19. Confirm existing Home Screen and Lock Screen widgets still render after refresh.
 
 Repeat the same test on Fajr's iPhone.
 

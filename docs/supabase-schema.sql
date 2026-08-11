@@ -51,8 +51,13 @@ create table if not exists public.photos (
   couple_id uuid not null references public.couples(id) on delete cascade,
   sender_user_id uuid not null references auth.users(id) on delete cascade,
   storage_path text not null,
+  receiver_saved_at timestamptz,
+  storage_deleted_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+alter table public.photos add column if not exists receiver_saved_at timestamptz;
+alter table public.photos add column if not exists storage_deleted_at timestamptz;
 
 create index if not exists couple_members_user_id_idx on public.couple_members(user_id);
 create index if not exists locations_couple_id_updated_at_idx on public.locations(couple_id, updated_at desc);
@@ -101,6 +106,49 @@ language sql
 immutable
 as $$
   select value ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+$$;
+
+create or replace function public.setup_together_member(
+  selected_role text,
+  selected_display_name text,
+  selected_pair_code text
+)
+returns table(couple_id uuid, user_id uuid, role text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_couple_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication is required.';
+  end if;
+
+  if selected_role not in ('sohaib', 'fajr') then
+    raise exception 'Invalid role.';
+  end if;
+
+  insert into public.couples (name, pair_code)
+  values ('Sohaib + Fajr', selected_pair_code)
+  on conflict (pair_code) do update set name = excluded.name
+  returning id into target_couple_id;
+
+  insert into public.profiles (id, display_name, role)
+  values (auth.uid(), selected_display_name, selected_role)
+  on conflict (id) do update set
+    display_name = excluded.display_name,
+    role = excluded.role;
+
+  insert into public.couple_members (couple_id, user_id, role)
+  values (target_couple_id, auth.uid(), selected_role)
+  on conflict (user_id) do update set
+    couple_id = excluded.couple_id,
+    role = excluded.role;
+
+  return query
+  select target_couple_id, auth.uid(), selected_role;
+end;
 $$;
 
 drop policy if exists "Users can insert their profile" on public.profiles;
@@ -185,6 +233,12 @@ create policy "Couple members can add their photos"
 on public.photos for insert
 with check (public.is_self_couple_member(couple_id, sender_user_id));
 
+drop policy if exists "Couple members can update photo transfer state" on public.photos;
+create policy "Couple members can update photo transfer state"
+on public.photos for update
+using (public.is_couple_member(couple_id))
+with check (public.is_couple_member(couple_id));
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'partner-photos',
@@ -239,12 +293,23 @@ with check (
   and (storage.foldername(name))[2]::uuid = auth.uid()
 );
 
+drop policy if exists "Couple members can delete transferred partner photos" on storage.objects;
+create policy "Couple members can delete transferred partner photos"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'partner-photos'
+  and public.is_uuid((storage.foldername(name))[1])
+  and public.is_couple_member((storage.foldername(name))[1]::uuid)
+);
+
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert on public.couples to authenticated;
 grant select, insert on public.couple_members to authenticated;
 grant select, insert, update on public.locations to authenticated;
 grant select, insert on public.messages to authenticated;
-grant select, insert on public.photos to authenticated;
+grant select, insert, update on public.photos to authenticated;
 grant execute on function public.is_couple_member(uuid) to authenticated;
 grant execute on function public.is_self_couple_member(uuid, uuid) to authenticated;
 grant execute on function public.is_uuid(text) to authenticated;
+grant execute on function public.setup_together_member(text, text, text) to authenticated;
