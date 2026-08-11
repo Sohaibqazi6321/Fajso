@@ -6,7 +6,11 @@ options:
 settings:
   base:
     CODE_SIGN_STYLE: Automatic
-    SWIFT_VERSION: "5.0"
+    SWIFT_VERSION: "5.10"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: 2.0.0
 targets:
   Together:
     type: application
@@ -20,10 +24,13 @@ targets:
     dependencies:
       - target: TogetherWidgets
         embed: true
+      - package: Supabase
+        product: Supabase
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sohaib.together
         INFOPLIST_FILE: ios/Together/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ios/Together/Together.entitlements
   TogetherWidgets:
     type: app-extension
     platform: iOS
@@ -37,4 +44,5 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sohaib.together.widgets
         INFOPLIST_FILE: ios/TogetherWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ios/TogetherWidgets/TogetherWidgets.entitlements
         SKIP_INSTALL: YES

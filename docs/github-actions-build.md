@@ -58,6 +58,7 @@ After installing on an iPhone:
 
 - Together launches.
 - The Distance widget appears in the widget picker.
+- The Distance widget can be added to the Lock Screen.
 - The Partner Photo widget appears in the widget picker.
 - Both widgets can be placed on the Home Screen.
 - The Partner Photo widget renders its test image.
@@ -68,4 +69,3 @@ Run the same checks on both Sohaib's and Fajr's iPhones.
 ## Cost Note
 
 Private repositories use included GitHub Actions minutes first. macOS minutes are more expensive than Linux minutes after the included allowance is used, so keep this workflow manual-first while testing.
-

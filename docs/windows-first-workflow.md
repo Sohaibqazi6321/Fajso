@@ -35,17 +35,16 @@ Create the Xcode project manually using [xcode-setup.md](xcode-setup.md). The `p
 - `TogetherWidgets`: one WidgetKit extension target
 - `ios/Shared`: included in both targets
 
-## App Group Toggle
+## App Group Check
 
-The default `project.yml` does not enable App Group entitlements automatically, because free Apple signing may reject them.
+The default `project.yml` now points both targets at their App Group entitlements files:
+
+- App: `ios/Together/Together.entitlements`
+- Widget extension: `ios/TogetherWidgets/TogetherWidgets.entitlements`
 
 After the basic app and widgets build:
 
-1. Try enabling App Groups on both targets in Xcode.
+1. In Xcode, confirm App Groups is enabled on both targets.
 2. Use `group.com.sohaib.together`.
-3. If Xcode accepts it, set each target's entitlements file:
-   - App: `ios/Together/Together.entitlements`
-   - Widget extension: `ios/TogetherWidgets/TogetherWidgets.entitlements`
-4. Rebuild and use the app's `Write Demo Cache` button.
-5. If Xcode rejects it, keep Phase 1 focused on proving sideloaded widgets render.
-
+3. Rebuild and use the app's `Write Demo Cache` button.
+4. If Xcode rejects App Groups with the free account, keep Phase 1 focused on proving sideloaded widgets render. Shared app-to-widget state may need a paid developer account or a different strategy later.

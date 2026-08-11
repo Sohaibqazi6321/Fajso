@@ -15,14 +15,48 @@ struct DistanceProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DistanceEntry>) -> Void) {
-        completion(Timeline(entries: [DistanceEntry(date: Date())], policy: .after(Date().addingTimeInterval(60 * 30))))
+        let entry = DistanceEntry(date: Date())
+        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(60 * 30))))
     }
 }
 
 struct DistanceWidgetView: View {
     let entry: DistanceEntry
+    @Environment(\.widgetFamily) private var family
 
     var body: some View {
+        switch family {
+        case .accessoryInline:
+            Label(TogetherDemo.distanceText, systemImage: "heart.fill")
+        case .accessoryCircular:
+            VStack(spacing: 2) {
+                Image(systemName: "heart.fill")
+                    .font(.caption.bold())
+
+                Text("7,846")
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+
+                Text("mi")
+                    .font(.caption2.weight(.bold))
+            }
+            .widgetAccentable()
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 3) {
+                Label(TogetherDemo.coupleName, systemImage: "heart.fill")
+                    .font(.caption.weight(.bold))
+
+                Text(TogetherDemo.distanceText)
+                    .font(.headline.weight(.heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .widgetAccentable()
+        default:
+            homeScreenView
+        }
+    }
+
+    private var homeScreenView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "heart.fill")
@@ -57,8 +91,8 @@ struct DistanceWidget: Widget {
             DistanceWidgetView(entry: entry)
         }
         .configurationDisplayName("Together Distance")
-        .description("Shows the distance between Sohaib and Fajr.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Shows the distance between Sohaib and Fajr on the Home Screen or Lock Screen.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryInline, .accessoryCircular, .accessoryRectangular])
     }
 }
 
@@ -68,3 +102,8 @@ struct DistanceWidget: Widget {
     DistanceEntry(date: Date())
 }
 
+#Preview(as: .accessoryRectangular) {
+    DistanceWidget()
+} timeline: {
+    DistanceEntry(date: Date())
+}

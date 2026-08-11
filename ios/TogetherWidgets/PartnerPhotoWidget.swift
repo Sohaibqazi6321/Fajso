@@ -66,7 +66,7 @@ struct PartnerPhotoWidgetView: View {
             let data = Data(base64Encoded: TogetherDemo.testPhotoBase64),
             let image = UIImage(data: data)
         else {
-            return Image(systemName: "photo.fill")
+            return Image(systemName: "person.crop.square.fill")
         }
 
         return Image(uiImage: image)
@@ -91,4 +91,3 @@ struct PartnerPhotoWidget: Widget {
 } timeline: {
     PartnerPhotoEntry(date: Date(), cachedDate: Date())
 }
-

@@ -11,15 +11,26 @@ The Phase 1 app contains:
 - A minimal SwiftUI app named Together.
 - One WidgetKit extension named TogetherWidgets.
 - Two widget kinds inside that single extension:
-  - Distance Widget
+  - Distance Widget for Home Screen and Lock Screen
   - Partner Photo Widget
 
 The widgets use hardcoded demo data:
 
 - Distance: `Sohaib + Fajr`, `7,846 mi apart`
-- Partner photo: a bundled in-code test image with a small `Together` overlay
+- Partner photo: a bundled valid PNG test image with a small `Together` overlay
 
 ## SideStore Test Order
+
+Before using a free Apple ID or SideStore slot, open `preview/together-preview.html` on Windows and test:
+
+- Sohaib view and Fajr view
+- Distance changes when either person's coordinates change
+- Browser location button, if permission is available
+- Small message sending
+- Partner photo selection from the app controls
+- Tapping the photo widget to open the larger photo view
+- Take Picture and Upload Photo controls inside the larger photo view
+- Home Screen and Lock Screen widget previews
 
 Test on Sohaib's iPhone first.
 
@@ -30,12 +41,14 @@ Test on Sohaib's iPhone first.
 5. Confirm the Distance Widget appears in the iOS widget picker.
 6. Confirm the Partner Photo Widget appears in the iOS widget picker.
 7. Place both widgets on the Home Screen.
-8. Confirm the Partner Photo Widget renders its test image.
-9. Use the app's "Write Demo Cache" button.
-10. Confirm the app writes to the shared App Group container successfully.
-11. Refresh/re-sign Together with SideStore.
-12. Confirm Together still launches after refresh.
-13. Confirm existing Home Screen widgets still render after refresh.
+8. Add the Distance Widget to the Lock Screen.
+9. Confirm the Lock Screen distance layouts appear in inline, circular, or rectangular form.
+10. Confirm the Partner Photo Widget renders its test image.
+11. Use the app's "Write Demo Cache" button.
+12. Confirm the app writes to the shared App Group container successfully.
+13. Refresh/re-sign Together with SideStore.
+14. Confirm Together still launches after refresh.
+15. Confirm existing Home Screen and Lock Screen widgets still render after refresh.
 
 Repeat the same test on Fajr's iPhone.
 
@@ -45,7 +58,8 @@ Phase 1 passes only if both phones can:
 
 - Install the app privately.
 - Launch the app.
-- Add both widgets.
+- Add the Distance widget to the Lock Screen.
+- Add both widgets to the Home Screen.
 - Render the photo widget.
 - Survive SideStore refresh without removing or breaking the widgets.
 
@@ -60,4 +74,3 @@ If SideStore fails, test these before considering paid Apple distribution:
 ## Known Risk
 
 WidgetKit itself is normal iOS functionality, but shared App Group storage may be limited by the signing profile available to a free Apple account. The Phase 1 app includes a simple shared-storage test so this risk is discovered early.
-

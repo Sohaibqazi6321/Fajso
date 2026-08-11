@@ -12,3 +12,7 @@ build/
 *.app
 *.appex
 
+# Local Supabase/Xcode secrets
+*.local.xcconfig
+.env
+.env.*

@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Together Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101012;
+      color: #f8f4f6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255, 91, 145, 0.22), transparent 28rem),
+        linear-gradient(135deg, #171619 0%, #222027 44%, #131417 100%);
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 4.5rem);
+      line-height: 0.95;
+    }
+
+    p {
+      color: #cfc5ca;
+      font-size: 1rem;
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    label {
+      display: block;
+      color: #ded4d9;
+      font-size: .78rem;
+      font-weight: 850;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      padding: 0 12px;
+      font: inherit;
+    }
+
+    button,
+    .file-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button[aria-pressed="true"] {
+      background: #ff5b91;
+      border-color: #ff8ab0;
+      color: #230610;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 24px 0 28px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(340px, 390px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .phone {
+      width: min(100%, 390px);
+      margin: 0 auto;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 42px;
+      padding: 18px;
+      background: #09090b;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+    }
+
+    .screen {
+      min-height: 760px;
+      border-radius: 30px;
+      padding: 24px 18px;
+      background:
+        linear-gradient(rgba(17, 17, 20, 0.16), rgba(17, 17, 20, 0.22)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='760' viewBox='0 0 390 760'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23b9c8dd'/%3E%3Cstop offset='.45' stop-color='%23d9a08c'/%3E%3Cstop offset='1' stop-color='%233a4055'/%3E%3C/linearGradient%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='30'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='390' height='760' fill='url(%23g)'/%3E%3Ccircle cx='80' cy='155' r='95' fill='%23f0bf9a' filter='url(%23b)' opacity='.72'/%3E%3Ccircle cx='300' cy='115' r='110' fill='%238db7da' filter='url(%23b)' opacity='.62'/%3E%3Ccircle cx='210' cy='460' r='160' fill='%232d3342' filter='url(%23b)' opacity='.5'/%3E%3C/svg%3E");
+      background-size: cover;
+    }
+
+    .app-card,
+    .panel {
+      border-radius: 8px;
+      padding: 18px;
+      background: rgba(13, 13, 16, 0.78);
+      backdrop-filter: blur(18px);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .app-title {
+      font-size: 2rem;
+      font-weight: 950;
+    }
+
+    .metric {
+      margin-top: 18px;
+      font-size: 2.15rem;
+      line-height: 1.02;
+      font-weight: 950;
+    }
+
+    .muted {
+      color: #cfc5ca;
+    }
+
+    .person-line {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+      color: #eee6ea;
+      font-weight: 800;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff5b91, #ff986b);
+      color: #260610;
+      font-weight: 950;
+      flex: 0 0 auto;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .primary {
+      border: 0;
+      background: linear-gradient(135deg, #ff5b91, #ff986b);
+      color: #260610;
+    }
+
+    .message-list {
+      display: grid;
+      gap: 8px;
+      max-height: 132px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .bubble {
+      width: fit-content;
+      max-width: 92%;
+      padding: 9px 11px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font-weight: 760;
+    }
+
+    .bubble.mine {
+      justify-self: end;
+      background: #ff8f6b;
+      color: #260610;
+    }
+
+    .widgets {
+      display: grid;
+      gap: 18px;
+    }
+
+    .widget-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .widget {
+      overflow: hidden;
+      border-radius: 24px;
+      box-shadow: 0 18px 56px rgba(0, 0, 0, .35);
+    }
+
+    .small {
+      width: 170px;
+      min-height: 170px;
+    }
+
+    .medium {
+      width: min(100%, 360px);
+      min-height: 170px;
+    }
+
+    .distance {
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      background: linear-gradient(135deg, #1f1a20, #45343f);
+      color: #fff;
+    }
+
+    .label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 900;
+    }
+
+    .heart {
+      color: #ff6a9c;
+    }
+
+    .distance-value {
+      margin-top: auto;
+      font-size: 1.48rem;
+      font-weight: 950;
+      line-height: 1.05;
+    }
+
+    .subtle {
+      margin-top: 9px;
+      color: rgba(255,255,255,.68);
+      font-size: .8rem;
+      font-weight: 700;
+    }
+
+    .lock-inline,
+    .lock-circle,
+    .lock-rect {
+      display: grid;
+      place-items: center;
+      color: #f4f4f5;
+      background: rgba(0, 0, 0, .46);
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 12px 40px rgba(0,0,0,.26);
+      backdrop-filter: blur(16px);
+    }
+
+    .lock-inline {
+      width: min(100%, 290px);
+      min-height: 34px;
+      border-radius: 17px;
+      padding: 0 14px;
+      font-weight: 850;
+    }
+
+    .lock-circle {
+      width: 76px;
+      min-height: 76px;
+      border-radius: 50%;
+      text-align: center;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .lock-circle small {
+      display: block;
+      margin-top: 2px;
+      font-size: .68rem;
+      color: rgba(255,255,255,.72);
+    }
+
+    .lock-rect {
+      justify-items: start;
+      width: 170px;
+      min-height: 76px;
+      border-radius: 18px;
+      padding: 10px 12px;
+    }
+
+    .lock-rect strong {
+      display: block;
+      font-size: 1rem;
+      margin-top: 3px;
+    }
+
+    .photo {
+      position: relative;
+      background:
+        linear-gradient(to top, rgba(0,0,0,.75), transparent 58%),
+        linear-gradient(135deg, #f9b27e, #d97977 44%, #495778);
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+    }
+
+    .photo::before {
+      content: "";
+      position: absolute;
+      inset: 18px 28px 42px;
+      border-radius: 999px 999px 120px 120px;
+      background:
+        radial-gradient(circle at 50% 22%, #ffe0cc 0 22%, transparent 23%),
+        linear-gradient(135deg, #362a36, #1d1d28);
+      opacity: var(--photo-placeholder-opacity, .86);
+    }
+
+    .overlay {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 12px;
+      color: #fff;
+      font-weight: 900;
+      text-shadow: 0 2px 8px rgba(0,0,0,.55);
+    }
+
+    .overlay span {
+      display: block;
+      margin-top: 3px;
+      color: rgba(255,255,255,.78);
+      font-size: .78rem;
+      font-weight: 750;
+    }
+
+    .note {
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      color: #d8d0d4;
+      background: rgba(255,255,255,.06);
+      font-size: .95rem;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(0,0,0,.72);
+    }
+
+    .modal[aria-hidden="false"] {
+      display: grid;
+    }
+
+    .photo-sheet {
+      width: min(100%, 430px);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #151418;
+      box-shadow: 0 30px 100px rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+
+    .photo-large {
+      position: relative;
+      min-height: 420px;
+      background:
+        linear-gradient(to top, rgba(0,0,0,.72), transparent 58%),
+        linear-gradient(135deg, #f9b27e, #d97977 44%, #495778);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .photo-large::before {
+      content: "";
+      position: absolute;
+      inset: 42px 58px 86px;
+      border-radius: 999px 999px 140px 140px;
+      background:
+        radial-gradient(circle at 50% 22%, #ffe0cc 0 22%, transparent 23%),
+        linear-gradient(135deg, #362a36, #1d1d28);
+      opacity: var(--large-photo-placeholder-opacity, .86);
+    }
+
+    .sheet-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 16px 16px;
+    }
+
+    .close-button {
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    @media (max-width: 820px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .phone {
+        order: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Together Prototype</h1>
+    <p>This is the free Windows test version. It lets us prove the two-person flow, distance math, tiny messages, photo preview, and widget designs before using Apple ID signing. Native iPhone widgets still need one real iPhone install later.</p>
+
+    <div class="toolbar" aria-label="Preview mode">
+      <button type="button" id="sohaib" aria-pressed="true">Sohaib view</button>
+      <button type="button" id="fajr" aria-pressed="false">Fajr view</button>
+      <button type="button" id="demo-trip">Demo Trip</button>
+      <button type="button" id="reset">Reset Prototype</button>
+    </div>
+
+    <div class="grid">
+      <section class="phone" aria-label="iPhone app prototype">
+        <div class="screen">
+          <div class="app-card">
+            <div class="app-title">Together</div>
+            <p class="muted">Signed in as <strong id="viewer-name">Sohaib</strong>. Partner: <strong id="partner-name">Fajr</strong>.</p>
+
+            <div class="metric" id="app-distance">7,846 mi apart</div>
+            <div class="muted" id="updated-at">Updated just now</div>
+
+            <div class="person-line">
+              <span class="avatar" id="viewer-avatar">S</span>
+              <span id="viewer-location-label">Sohaib location</span>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="viewer-lat">Latitude</label>
+                <input id="viewer-lat" inputmode="decimal">
+              </div>
+              <div>
+                <label for="viewer-lng">Longitude</label>
+                <input id="viewer-lng" inputmode="decimal">
+              </div>
+            </div>
+
+            <div class="stack">
+              <button class="primary" type="button" id="use-browser-location">Use My Browser Location</button>
+              <input id="message-text" maxlength="80" placeholder="Leave a small message">
+              <button type="button" id="send-message">Send Message</button>
+              <label class="file-button" for="photo-input">Choose Partner Photo</label>
+              <input id="photo-input" type="file" accept="image/*" hidden>
+            </div>
+
+            <p class="status" id="status">Prototype data is saved in this browser only.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="widgets" aria-label="Widget previews">
+        <div class="widget-row">
+          <div class="widget small distance">
+            <div class="label"><span class="heart">&lt;3</span><span>Sohaib + Fajr</span></div>
+            <div class="distance-value" id="home-distance">7,846 mi apart</div>
+            <div class="subtle" id="home-status">Updated just now</div>
+          </div>
+
+          <div class="widget small distance">
+            <div class="label"><span class="avatar" id="message-avatar">F</span><span id="message-title">Fajr</span></div>
+            <div class="distance-value" id="message-widget">Good night and sweet dreams love &lt;3</div>
+            <div class="subtle">Latest message</div>
+          </div>
+        </div>
+
+        <div class="widget-row" aria-label="Lock Screen distance widget previews">
+          <div class="lock-inline" id="lock-inline">&lt;3 7,846 mi apart</div>
+          <div class="lock-circle">&lt;3<br><span id="lock-circle-distance">7,846</span><small id="lock-circle-unit">mi</small></div>
+          <div class="lock-rect">&lt;3 Sohaib + Fajr<strong id="lock-rect">7,846 mi apart</strong></div>
+        </div>
+
+        <div class="widget medium photo" id="photo-widget">
+          <div class="overlay">
+            <span id="photo-title">Together</span>
+            <span id="photo-status">Test Photo</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <strong>Messages</strong>
+          <div class="message-list" id="message-list"></div>
+        </div>
+
+        <div class="note">
+          This page is fully testable on Windows, but it is still a prototype. Real two-phone sync needs CloudKit, Supabase, Firebase, or another shared backend. Real Lock Screen widgets need the native iPhone install.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal" id="photo-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="photo-modal-title">
+    <div class="photo-sheet">
+      <div class="sheet-bar">
+        <div>
+          <strong id="photo-modal-title">Partner Photo</strong>
+          <div class="muted" id="photo-modal-subtitle">Tap upload or camera to update the widget.</div>
+        </div>
+        <button class="close-button" type="button" id="close-photo-modal" aria-label="Close photo viewer">x</button>
+      </div>
+      <div class="photo-large" id="photo-large">
+        <div class="overlay">
+          <span id="large-photo-title">Together</span>
+          <span id="large-photo-status">Test Photo</span>
+        </div>
+      </div>
+      <div class="sheet-actions">
+        <label class="file-button" for="camera-input">Take Picture</label>
+        <input id="camera-input" type="file" accept="image/*" capture="environment" hidden>
+        <label class="file-button" for="modal-photo-input">Upload Photo</label>
+        <input id="modal-photo-input" type="file" accept="image/*" hidden>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const defaultState = {
+      viewer: "Sohaib",
+      people: {
+        Sohaib: { lat: 41.8781, lng: -87.6298 },
+        Fajr: { lat: 21.4225, lng: 39.8262 }
+      },
+      messages: [
+        { sender: "Fajr", text: "Good night and sweet dreams love <3", at: Date.now() - 60000 }
+      ],
+      photo: "",
+      updatedAt: Date.now()
+    };
+
+    const els = {
+      sohaib: document.querySelector("#sohaib"),
+      fajr: document.querySelector("#fajr"),
+      demoTrip: document.querySelector("#demo-trip"),
+      reset: document.querySelector("#reset"),
+      viewerName: document.querySelector("#viewer-name"),
+      partnerName: document.querySelector("#partner-name"),
+      viewerAvatar: document.querySelector("#viewer-avatar"),
+      viewerLocationLabel: document.querySelector("#viewer-location-label"),
+      viewerLat: document.querySelector("#viewer-lat"),
+      viewerLng: document.querySelector("#viewer-lng"),
+      appDistance: document.querySelector("#app-distance"),
+      updatedAt: document.querySelector("#updated-at"),
+      status: document.querySelector("#status"),
+      browserLocation: document.querySelector("#use-browser-location"),
+      messageText: document.querySelector("#message-text"),
+      sendMessage: document.querySelector("#send-message"),
+      photoInput: document.querySelector("#photo-input"),
+      cameraInput: document.querySelector("#camera-input"),
+      modalPhotoInput: document.querySelector("#modal-photo-input"),
+      photoModal: document.querySelector("#photo-modal"),
+      closePhotoModal: document.querySelector("#close-photo-modal"),
+      photoLarge: document.querySelector("#photo-large"),
+      largePhotoStatus: document.querySelector("#large-photo-status"),
+      photoModalSubtitle: document.querySelector("#photo-modal-subtitle"),
+      homeDistance: document.querySelector("#home-distance"),
+      homeStatus: document.querySelector("#home-status"),
+      lockInline: document.querySelector("#lock-inline"),
+      lockCircleDistance: document.querySelector("#lock-circle-distance"),
+      lockCircleUnit: document.querySelector("#lock-circle-unit"),
+      lockRect: document.querySelector("#lock-rect"),
+      photoWidget: document.querySelector("#photo-widget"),
+      photoStatus: document.querySelector("#photo-status"),
+      messageAvatar: document.querySelector("#message-avatar"),
+      messageTitle: document.querySelector("#message-title"),
+      messageWidget: document.querySelector("#message-widget"),
+      messageList: document.querySelector("#message-list")
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      const raw = localStorage.getItem("togetherPrototypeState");
+      if (!raw) return structuredClone(defaultState);
+      try {
+        return { ...structuredClone(defaultState), ...JSON.parse(raw) };
+      } catch {
+        return structuredClone(defaultState);
+      }
+    }
+
+    function saveState() {
+      state.updatedAt = Date.now();
+      localStorage.setItem("togetherPrototypeState", JSON.stringify(state));
+    }
+
+    function partnerFor(name) {
+      return name === "Sohaib" ? "Fajr" : "Sohaib";
+    }
+
+    function toRadians(value) {
+      return value * Math.PI / 180;
+    }
+
+    function distanceMiles(a, b) {
+      const earthMiles = 3958.8;
+      const dLat = toRadians(b.lat - a.lat);
+      const dLng = toRadians(b.lng - a.lng);
+      const lat1 = toRadians(a.lat);
+      const lat2 = toRadians(b.lat);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      return earthMiles * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    }
+
+    function formatDistance(miles) {
+      if (miles < 0.1) return "less than 0.1 mi apart";
+      if (miles < 10) return `${miles.toFixed(1)} mi apart`;
+      return `${Math.round(miles).toLocaleString()} mi apart`;
+    }
+
+    function shortDistance(miles) {
+      if (miles < 10) return miles.toFixed(1);
+      return Math.round(miles).toLocaleString();
+    }
+
+    function lastUpdatedText() {
+      const seconds = Math.max(0, Math.round((Date.now() - state.updatedAt) / 1000));
+      if (seconds < 10) return "Updated just now";
+      if (seconds < 60) return `Updated ${seconds}s ago`;
+      return `Updated ${Math.round(seconds / 60)} min ago`;
+    }
+
+    function latestMessage() {
+      return state.messages[state.messages.length - 1] || { sender: partnerFor(state.viewer), text: "No messages yet" };
+    }
+
+    function render() {
+      const viewer = state.viewer;
+      const partner = partnerFor(viewer);
+      const viewerLoc = state.people[viewer];
+      const partnerLoc = state.people[partner];
+      const miles = distanceMiles(viewerLoc, partnerLoc);
+      const distanceText = formatDistance(miles);
+      const updatedText = lastUpdatedText();
+      const message = latestMessage();
+
+      els.sohaib.setAttribute("aria-pressed", String(viewer === "Sohaib"));
+      els.fajr.setAttribute("aria-pressed", String(viewer === "Fajr"));
+      els.viewerName.textContent = viewer;
+      els.partnerName.textContent = partner;
+      els.viewerAvatar.textContent = viewer[0];
+      els.viewerLocationLabel.textContent = `${viewer} location`;
+      els.viewerLat.value = viewerLoc.lat.toFixed(4);
+      els.viewerLng.value = viewerLoc.lng.toFixed(4);
+
+      els.appDistance.textContent = distanceText;
+      els.homeDistance.textContent = distanceText;
+      els.homeStatus.textContent = updatedText;
+      els.updatedAt.textContent = updatedText;
+      els.lockInline.textContent = `<3 ${distanceText}`;
+      els.lockCircleDistance.textContent = shortDistance(miles);
+      els.lockCircleUnit.textContent = "mi";
+      els.lockRect.textContent = distanceText;
+
+      els.messageAvatar.textContent = message.sender[0];
+      els.messageTitle.textContent = message.sender;
+      els.messageWidget.textContent = message.text;
+      els.messageList.innerHTML = "";
+      state.messages.slice(-6).forEach(item => {
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${item.sender === viewer ? "mine" : ""}`;
+        bubble.textContent = item.text;
+        els.messageList.appendChild(bubble);
+      });
+
+      if (state.photo) {
+        els.photoWidget.style.backgroundImage = `linear-gradient(to top, rgba(0,0,0,.75), transparent 58%), url("${state.photo}")`;
+        els.photoWidget.style.setProperty("--photo-placeholder-opacity", "0");
+        els.photoLarge.style.backgroundImage = `linear-gradient(to top, rgba(0,0,0,.75), transparent 58%), url("${state.photo}")`;
+        els.photoLarge.style.setProperty("--large-photo-placeholder-opacity", "0");
+        els.photoStatus.textContent = `${partner}'s Photo`;
+        els.largePhotoStatus.textContent = `${partner}'s Photo`;
+        els.photoModalSubtitle.textContent = "This is the photo the widget will show.";
+      } else {
+        els.photoWidget.style.backgroundImage = "";
+        els.photoWidget.style.setProperty("--photo-placeholder-opacity", ".86");
+        els.photoLarge.style.backgroundImage = "";
+        els.photoLarge.style.setProperty("--large-photo-placeholder-opacity", ".86");
+        els.photoStatus.textContent = "Test Photo";
+        els.largePhotoStatus.textContent = "Test Photo";
+        els.photoModalSubtitle.textContent = "Take or upload a photo to update the widget.";
+      }
+    }
+
+    function updateViewerLocation() {
+      const viewer = state.viewer;
+      const lat = Number(els.viewerLat.value);
+      const lng = Number(els.viewerLng.value);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      state.people[viewer] = { lat, lng };
+      saveState();
+      render();
+    }
+
+    els.sohaib.addEventListener("click", () => {
+      state.viewer = "Sohaib";
+      saveState();
+      render();
+    });
+
+    els.fajr.addEventListener("click", () => {
+      state.viewer = "Fajr";
+      saveState();
+      render();
+    });
+
+    els.viewerLat.addEventListener("change", updateViewerLocation);
+    els.viewerLng.addEventListener("change", updateViewerLocation);
+
+    els.demoTrip.addEventListener("click", () => {
+      state.people.Sohaib = { lat: 41.8781, lng: -87.6298 };
+      state.people.Fajr = { lat: 21.4225, lng: 39.8262 };
+      saveState();
+      render();
+    });
+
+    els.reset.addEventListener("click", () => {
+      localStorage.removeItem("togetherPrototypeState");
+      state = structuredClone(defaultState);
+      render();
+    });
+
+    els.browserLocation.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        els.status.textContent = "Browser location is not available here.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(position => {
+        state.people[state.viewer] = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        els.status.textContent = `${state.viewer}'s browser location saved.`;
+        saveState();
+        render();
+      }, () => {
+        els.status.textContent = "Location permission was not granted.";
+      }, {
+        enableHighAccuracy: false,
+        timeout: 8000,
+        maximumAge: 15 * 60 * 1000
+      });
+    });
+
+    els.sendMessage.addEventListener("click", () => {
+      const text = els.messageText.value.trim();
+      if (!text) return;
+      state.messages.push({ sender: state.viewer, text, at: Date.now() });
+      els.messageText.value = "";
+      saveState();
+      render();
+    });
+
+    els.messageText.addEventListener("keydown", event => {
+      if (event.key === "Enter") els.sendMessage.click();
+    });
+
+    function savePhotoFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.photo = String(reader.result);
+        els.status.textContent = "Photo saved to the prototype widget.";
+        saveState();
+        render();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openPhotoModal() {
+      els.photoModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closePhotoModal() {
+      els.photoModal.setAttribute("aria-hidden", "true");
+    }
+
+    els.photoWidget.addEventListener("click", openPhotoModal);
+    els.closePhotoModal.addEventListener("click", closePhotoModal);
+    els.photoModal.addEventListener("click", event => {
+      if (event.target === els.photoModal) closePhotoModal();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closePhotoModal();
+    });
+
+    els.photoInput.addEventListener("change", () => {
+      savePhotoFile(els.photoInput.files[0]);
+    });
+
+    els.cameraInput.addEventListener("change", () => {
+      savePhotoFile(els.cameraInput.files[0]);
+    });
+
+    els.modalPhotoInput.addEventListener("change", () => {
+      savePhotoFile(els.modalPhotoInput.files[0]);
+    });
+
+    render();
+    setInterval(render, 15000);
+  </script>
+</body>
+</html>
