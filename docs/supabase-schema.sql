@@ -113,7 +113,7 @@ create or replace function public.setup_together_member(
   selected_display_name text,
   selected_pair_code text
 )
-returns table(couple_id uuid, user_id uuid, role text)
+returns table(result_couple_id uuid, result_user_id uuid, result_role text)
 language plpgsql
 security definer
 set search_path = public

@@ -62,7 +62,7 @@ final class TogetherSupabaseService: ObservableObject {
         let displayName = role == .sohaib ? "Sohaib" : "Fajr"
 
         do {
-            let memberships: [TogetherMembershipRecord] = try await client
+            let memberships: [TogetherSetupMemberResult] = try await client
                 .rpc(
                     "setup_together_member",
                     params: [

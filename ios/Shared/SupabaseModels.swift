@@ -59,6 +59,18 @@ struct TogetherMembershipRecord: Codable, Sendable {
     }
 }
 
+struct TogetherSetupMemberResult: Codable, Sendable {
+    let coupleId: UUID
+    let userId: UUID
+    let role: TogetherRole
+
+    enum CodingKeys: String, CodingKey {
+        case coupleId = "result_couple_id"
+        case userId = "result_user_id"
+        case role = "result_role"
+    }
+}
+
 struct TogetherMessageRecord: Codable, Identifiable, Sendable {
     let id: UUID
     let coupleId: UUID

@@ -26,6 +26,25 @@ struct DistanceWidgetView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
+        content
+            .containerBackground(for: .widget) {
+                if family == .systemSmall || family == .systemMedium {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.12, green: 0.10, blue: 0.13),
+                            Color(red: 0.25, green: 0.20, blue: 0.24)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    Color.clear
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch family {
         case .accessoryInline:
             Label(entry.snapshot.text, systemImage: "heart.fill")
@@ -82,7 +101,7 @@ struct DistanceWidgetView: View {
                 .foregroundStyle(.secondary)
         }
         .foregroundStyle(.white)
-        .togetherWidgetBackground()
+        .padding()
     }
 }
 
