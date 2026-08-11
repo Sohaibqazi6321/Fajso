@@ -1,0 +1,14 @@
+# Xcode
+DerivedData/
+*.xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Build outputs
+build/
+*.ipa
+*.app
+*.appex
+

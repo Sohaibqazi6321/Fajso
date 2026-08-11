@@ -1,0 +1,40 @@
+name: Together
+options:
+  bundleIdPrefix: com.sohaib
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+targets:
+  Together:
+    type: application
+    platform: iOS
+    sources:
+      - path: ios/Together
+        excludes:
+          - Info.plist
+          - Together.entitlements
+      - path: ios/Shared
+    dependencies:
+      - target: TogetherWidgets
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sohaib.together
+        INFOPLIST_FILE: ios/Together/Info.plist
+  TogetherWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ios/TogetherWidgets
+        excludes:
+          - Info.plist
+          - TogetherWidgets.entitlements
+      - path: ios/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sohaib.together.widgets
+        INFOPLIST_FILE: ios/TogetherWidgets/Info.plist
+        SKIP_INSTALL: YES

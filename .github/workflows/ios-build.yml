@@ -1,0 +1,76 @@
+name: iOS unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  build:
+    name: Build Together
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Together.xcodeproj \
+            -scheme Together \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build | tee xcodebuild.log
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Together.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Together.app was not found at $APP_PATH"
+            find build/DerivedData/Build/Products -maxdepth 3 -type d -name "*.app" -print || true
+            exit 1
+          fi
+
+          rm -rf build/ipa
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/Together.app
+          ditto -c -k --keepParent build/ipa/Payload Together-unsigned.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Together-unsigned-ipa
+          path: Together-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Upload build diagnostics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Together-build-diagnostics
+          path: |
+            xcodebuild.log
+            Together.xcodeproj
+          if-no-files-found: warn
+
