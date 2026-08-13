@@ -1,24 +1,27 @@
-import WidgetKit
 import SwiftUI
 import UIKit
+import WidgetKit
 
 struct PartnerPhotoEntry: TimelineEntry {
     let date: Date
-    let snapshot: TogetherPartnerPhotoSnapshot
+    let state: CoupleWidgetState?
+    let photoData: Data?
 }
 
 struct PartnerPhotoProvider: TimelineProvider {
     func placeholder(in context: Context) -> PartnerPhotoEntry {
-        PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
+        PartnerPhotoEntry(date: Date(), state: nil, photoData: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (PartnerPhotoEntry) -> Void) {
-        completion(PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto()))
+        let state = CoupleWidgetCache.load()
+        completion(PartnerPhotoEntry(date: Date(), state: state, photoData: CoupleWidgetCache.photoData(for: state)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PartnerPhotoEntry>) -> Void) {
-        let entry = PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(60 * 30))))
+        let state = CoupleWidgetCache.load()
+        let entry = PartnerPhotoEntry(date: Date(), state: state, photoData: CoupleWidgetCache.photoData(for: state))
+        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
     }
 }
 
@@ -27,53 +30,48 @@ struct PartnerPhotoWidgetView: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            widgetImage
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.72)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
+            if let data = entry.photoData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                LinearGradient(colors: [.clear, .black.opacity(0.66)], startPoint: .center, endPoint: .bottom)
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.98, green: 0.96, blue: 1.0),
+                        Color(red: 0.88, green: 0.82, blue: 0.97)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "heart.text.square.fill")
+                    .font(.system(size: 42))
+                    .foregroundStyle(Color(red: 0.44, green: 0.25, blue: 0.67).opacity(0.75))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Together")
                     .font(.headline.bold())
-
                 Text(statusText)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.82))
+                    .lineLimit(2)
+                    .opacity(0.85)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(entry.photoData == nil ? Color(red: 0.22, green: 0.15, blue: 0.28) : .white)
             .padding(12)
         }
-        .containerBackground(.black, for: .widget)
+        .containerBackground(Color(red: 0.95, green: 0.91, blue: 0.99), for: .widget)
         .widgetURL(URL(string: "together://photo"))
     }
 
     private var statusText: String {
-        entry.snapshot.statusText
-    }
-
-    private var widgetImage: Image {
-        if
-            let data = entry.snapshot.data,
-            let image = UIImage(data: data)
-        {
-            return Image(uiImage: image)
-        }
-
-        guard
-            let data = Data(base64Encoded: TogetherDemo.testPhotoBase64),
-            let image = UIImage(data: data)
-        else {
-            return Image(systemName: "person.crop.square.fill")
-        }
-
-        return Image(uiImage: image)
+        guard let state = entry.state else { return "Open Together to get started" }
+        guard state.pairingStatus == .paired else { return "Pair with your partner" }
+        guard let photo = state.partnerPhoto, entry.photoData != nil else { return "Waiting for a photo" }
+        return TogetherDistanceFormatter.ageText(since: photo.updatedAt, now: entry.date)
     }
 }
 
@@ -85,7 +83,7 @@ struct PartnerPhotoWidget: Widget {
             PartnerPhotoWidgetView(entry: entry)
         }
         .configurationDisplayName("Together Photo")
-        .description("Shows the latest photo from your partner.")
+        .description("Shows the current photo from your partner, including while offline.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -93,5 +91,5 @@ struct PartnerPhotoWidget: Widget {
 #Preview(as: .systemMedium) {
     PartnerPhotoWidget()
 } timeline: {
-    PartnerPhotoEntry(date: Date(), snapshot: TogetherDemo.partnerPhoto())
+    PartnerPhotoEntry(date: Date(), state: nil, photoData: nil)
 }

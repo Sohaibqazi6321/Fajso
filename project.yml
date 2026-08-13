@@ -10,7 +10,7 @@ settings:
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift.git
-    from: 2.0.0
+    exactVersion: 2.26.1
 targets:
   Together:
     type: application
@@ -31,6 +31,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.sohaib.together
         INFOPLIST_FILE: ios/Together/Info.plist
         CODE_SIGN_ENTITLEMENTS: ios/Together/Together.entitlements
+        TOGETHER_DEVELOPER_USER_ID: E18A0AD5-048B-4B53-A363-5E9FF1832B86
   TogetherWidgets:
     type: app-extension
     platform: iOS

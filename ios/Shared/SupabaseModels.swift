@@ -1,40 +1,12 @@
 import Foundation
 
-struct TogetherProfile: Codable, Identifiable, Sendable {
-    let id: UUID
-    let displayName: String
-    let role: TogetherRole
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case displayName = "display_name"
-        case role
-    }
-}
-
-enum TogetherRole: String, Codable, Sendable {
-    case sohaib
-    case fajr
-}
-
-struct TogetherCouple: Codable, Identifiable, Sendable {
-    let id: UUID
-    let name: String
-    let pairCode: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case pairCode = "pair_code"
-    }
-}
-
 struct TogetherLocationRecord: Codable, Sendable {
     let coupleId: UUID
     let userId: UUID
     let latitude: Double
     let longitude: Double
     let accuracyMeters: Double?
+    let capturedAt: String
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
@@ -43,80 +15,93 @@ struct TogetherLocationRecord: Codable, Sendable {
         case latitude
         case longitude
         case accuracyMeters = "accuracy_meters"
+        case capturedAt = "captured_at"
         case updatedAt = "updated_at"
     }
 }
 
-struct TogetherMembershipRecord: Codable, Sendable {
+struct TogetherLocationUpsert: Encodable {
     let coupleId: UUID
     let userId: UUID
-    let role: TogetherRole
+    let latitude: Double
+    let longitude: Double
+    let accuracyMeters: Double?
+    let capturedAt: String
 
     enum CodingKeys: String, CodingKey {
         case coupleId = "couple_id"
         case userId = "user_id"
-        case role
+        case latitude
+        case longitude
+        case accuracyMeters = "accuracy_meters"
+        case capturedAt = "captured_at"
     }
 }
 
-struct TogetherSetupMemberResult: Codable, Sendable {
-    let coupleId: UUID
-    let userId: UUID
-    let role: TogetherRole
+struct TogetherPairingRPCResult: Codable, Sendable {
+    let status: String
+    let coupleId: UUID?
+    let createdBy: UUID?
+    let memberCount: Int
+    let partnerDisplayName: String?
+    let inviteCode: String?
+    let inviteExpiresAt: String?
 
     enum CodingKeys: String, CodingKey {
+        case status = "result_status"
         case coupleId = "result_couple_id"
-        case userId = "result_user_id"
-        case role = "result_role"
+        case createdBy = "result_created_by"
+        case memberCount = "result_member_count"
+        case partnerDisplayName = "result_partner_display_name"
+        case inviteCode = "result_invite_code"
+        case inviteExpiresAt = "result_invite_expires_at"
     }
 }
 
-struct TogetherMessageRecord: Codable, Identifiable, Sendable {
-    let id: UUID
-    let coupleId: UUID
-    let senderUserId: UUID
-    let text: String
-    let createdAt: Date
+struct TogetherInviteRPCResult: Codable, Sendable {
+    let status: String
+    let coupleId: UUID?
+    let inviteCode: String?
+    let expiresAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case coupleId = "couple_id"
-        case senderUserId = "sender_user_id"
-        case text
-        case createdAt = "created_at"
+        case status = "result_status"
+        case coupleId = "result_couple_id"
+        case inviteCode = "result_invite_code"
+        case expiresAt = "result_expires_at"
     }
 }
 
-struct TogetherPhotoRecord: Codable, Identifiable, Sendable {
-    let id: UUID
+struct TogetherStatusRPCResult: Codable, Sendable {
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case status = "result_status"
+    }
+}
+
+struct TogetherPublishPhotoRPCResult: Codable, Sendable {
+    let status: String
+    let previousStoragePath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status = "result_status"
+        case previousStoragePath = "result_previous_storage_path"
+    }
+}
+
+struct TogetherCurrentPartnerPhotoRecord: Codable, Sendable {
     let coupleId: UUID
     let senderUserId: UUID
+    let photoId: UUID
     let storagePath: String
-    let receiverSavedAt: String?
-    let storageDeletedAt: String?
-    let createdAt: String
+    let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id
         case coupleId = "couple_id"
         case senderUserId = "sender_user_id"
+        case photoId = "photo_id"
         case storagePath = "storage_path"
-        case receiverSavedAt = "receiver_saved_at"
-        case storageDeletedAt = "storage_deleted_at"
-        case createdAt = "created_at"
-    }
-}
-
-struct TogetherPhotoInsert: Encodable {
-    let id: UUID
-    let coupleId: UUID
-    let senderUserId: UUID
-    let storagePath: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case coupleId = "couple_id"
-        case senderUserId = "sender_user_id"
-        case storagePath = "storage_path"
+        case updatedAt = "updated_at"
     }
 }

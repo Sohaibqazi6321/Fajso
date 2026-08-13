@@ -1,6 +1,11 @@
--- Together Supabase schema
--- Run this in Supabase SQL Editor after creating the project.
--- Never paste service_role keys into the iOS app.
+-- LEGACY BASELINE ONLY
+--
+-- Together V1 is defined by all files in supabase/migrations, applied in
+-- filename order. The first file bootstraps or upgrades this legacy baseline.
+--
+-- Do not use this legacy role/permanent-code schema for a new deployment. It is
+-- retained only to document the pre-V1 database that the V1 migration upgrades.
+-- Never paste service_role or secret keys into the iOS app.
 
 create extension if not exists pgcrypto;
 

@@ -1,6 +1,8 @@
 # Supabase Setup
 
-Use Supabase for the real synced version: accounts, pair membership, locations, messages, and partner photos.
+Together uses Supabase for authentication, invitation pairing, current locations,
+and private current partner photos. Widgets never connect to Supabase; the app
+writes sanitized display state into the App Group cache.
 
 ## 1. Create Project
 
@@ -12,18 +14,28 @@ Use Supabase for the real synced version: accounts, pair membership, locations, 
 
 Supabase's Swift client initializes with the Project URL and publishable key. Supabase documents that frontend apps should use the publishable key with Row Level Security enabled, and that service role or secret keys must not be exposed.
 
-## 2. Run Schema
+## 2. Apply the Versioned Schema
 
-1. Open Supabase SQL Editor.
-2. Paste and run [supabase-schema.sql](supabase-schema.sql). Run it again after pulling the photo-sync changes so the new photo transfer fields, update policy, and storage delete policy are present.
-3. Confirm these tables exist:
+Apply every SQL file in [`supabase/migrations`](../supabase/migrations/) in
+filename order through the Supabase CLI migration workflow or the Supabase
+migration tool. The first migration bootstraps a new project or upgrades the
+legacy database; later migrations are required hardening and recovery changes.
+Do not cherry-pick only the first file, and do not rerun the legacy
+`supabase-schema.sql` setup.
+
+After applying it, confirm these tables exist:
    - `profiles`
    - `couples`
    - `couple_members`
+   - `pair_invites`
    - `locations`
    - `messages`
    - `photos`
-4. Confirm Storage has a private bucket named `partner-photos`.
+   - `current_partner_photos`
+
+Confirm Storage has a private bucket named `partner-photos`. The `messages` and
+legacy `photos` tables remain unused in V1 for safe compatibility; they are not
+product features.
 
 The schema enables RLS on app tables. For files, photo uploads use this storage path shape:
 
@@ -72,42 +84,32 @@ Never commit:
 
 ## 5. Pair Sohaib and Fajr
 
-The app now includes a pair-code setup path after sign-in:
+Authentication and pairing are separate. After signing in:
 
-1. Sohaib signs in with email.
-2. Sohaib enters `SOHAIB-FAJR-2026`.
-3. Sohaib taps `I am Sohaib`.
-4. Fajr signs in with email.
-5. Fajr enters `SOHAIB-FAJR-2026`.
-6. Fajr taps `I am Fajr`.
+1. Sohaib chooses **Invite Partner**.
+2. Together creates a random invitation that expires after 72 hours.
+3. Sohaib copies or shares the code.
+4. Fajr signs in and chooses **Join Partner**.
+5. Fajr enters the invitation code once.
 
-That calls `setup_together_member`, which creates or joins the couple, creates the profile, and inserts the membership row.
+The `join_pair_invite` RPC performs validation, membership insertion, invite
+consumption, and activation atomically. Direct client writes cannot create or
+move memberships. A user can belong to only one couple and each couple is capped
+at two members by both serialized RPC logic and a database trigger.
 
-You can still seed manually if needed:
+Do not seed memberships directly. Regenerate or revoke a pending invitation from
+the app when a code is lost or expires.
 
-```sql
-insert into public.couples (id, name, pair_code)
-values ('00000000-0000-0000-0000-000000000001', 'Sohaib + Fajr', 'SOHAIB-FAJR-2026');
+## 6. Sohaib-only Developer Distance
 
-insert into public.couple_members (couple_id, user_id, role)
-values
-  ('00000000-0000-0000-0000-000000000001', 'SOHAIB_AUTH_USER_ID', 'sohaib'),
-  ('00000000-0000-0000-0000-000000000001', 'FAJR_AUTH_USER_ID', 'fajr');
-```
-
-Replace the placeholder UUIDs with real auth user IDs.
-
-## 6. App Work Next
-
-Next implementation steps:
-
-1. Add sign-in screen with email OTP.
-2. Add "I am Sohaib / I am Fajr" setup.
-3. Add pair-code join screen.
-4. Sync location rows.
-5. Sync messages.
-6. Upload selected/taken photos to `partner-photos`.
-7. Save the latest synced distance/photo/message into App Group cache for widgets.
+The iOS build contains Sohaib's immutable Supabase Auth user ID as a non-secret
+build configuration value. Only that authenticated account sees Developer Mode.
+Its distance override is stored locally, is scoped to that account, and changes
+the same App Group presentation used by the real Distance Widget. It never writes
+coordinates or test distance data to Supabase. Disable it to return immediately
+to the real relationship state. Sohaib can enable it while unpaired or while an
+invite is pending, which allows the production Distance Widget rendering path to
+be verified before Fajr installs Together.
 
 ## 7. Live Distance Requirements
 
@@ -116,38 +118,52 @@ Live distance works after:
 1. Sohaib and Fajr both sign in.
 2. Both auth users are present in `couple_members`.
 3. Each phone grants location permission.
-4. Each phone taps `Sync Now` at least once.
+4. Each phone opens Together with location permission or uses manual refresh at
+   least once.
 
-The app uploads only the current user's own location row. It then reads both rows, calculates distance on device, and writes the latest distance into App Group cache for the widgets.
+The app uploads only the current user's own latest location row. It reads the two
+current rows, calculates distance on device, and writes only the distance and its
+source freshness to the App Group cache. Exact coordinates never enter widget
+state.
 
 For battery efficiency, the app uses:
 
-- one-shot location requests for manual refresh
-- `startMonitoringSignificantLocationChanges()` for background-friendly updates
-- a 500 meter distance filter
+- one-shot location requests at launch, when the app becomes active, and on
+  manual refresh
+- foreground-only When In Use authorization in V1
 - cached widget rendering instead of direct widget network calls
 
-## 8. Photo Sync Requirements
+Together does not claim continuous or navigation-grade background tracking.
+An explicit opt-in Always/background mode can be added later if two-device
+testing shows that foreground refreshes are insufficient.
+
+## 8. Current Partner Photo
 
 The native iOS app now includes the first real Partner Photo sync path:
 
 1. Open `Partner Photo` from the app, or tap the Partner Photo widget.
 2. Choose `Take Picture` or `Upload Photo`.
-3. The app compresses the image to JPEG.
-4. The app uploads the temporary transfer file to:
+3. The app resizes and compresses the image to JPEG.
+4. The app uploads an immutable private object to:
 
 ```text
 partner-photos/{couple_id}/{user_id}/{photo_id}.jpg
 ```
 
-5. The app inserts a lightweight row in `photos`.
-6. The partner opens the app/photo screen or taps `Refresh`.
-7. The partner downloads the latest photo where `sender_user_id` is not their own user id.
-8. The app caches that image in App Group storage so the widget can show it locally.
-9. The app asks for Photos add permission and saves the received photo to the iPhone Photos app once.
-10. The app marks `receiver_saved_at` after the save succeeds.
-11. Cleanup deletes the temporary Supabase Storage file after `receiver_saved_at` is at least 24 hours old, then marks `storage_deleted_at`.
+5. The authoritative `publish_current_partner_photo` RPC swaps only the sender's
+   current pointer.
+6. The partner's app downloads and validates that current image.
+7. A staged App Group file replaces the old cache only after the new image is
+   complete and decodable.
+8. The Photo Widget reloads and reads only that local file.
 
-The `photos` database row stays as small history/metadata. The full image is meant to live permanently on the receiver's iPhone after it is saved to Photos, not in Supabase.
+The previous cached image stays visible through offline or failed-download
+states. After a successful replacement, the sender removes the superseded
+remote object. Unpairing immediately revokes access and clears local caches;
+inaccessible orphan objects should be removed by a privileged scheduled
+retention job because client RLS intentionally cannot delete a partner's file.
+V1 does not expose photo history.
 
-Widgets do not call Supabase directly. The Partner Photo widget reads the locally cached App Group image first, then falls back to the bundled test image.
+Widgets do not call Supabase directly. The Partner Photo widget reads the
+locally cached App Group image first, then shows a friendly placeholder when no
+partner photo has synced.

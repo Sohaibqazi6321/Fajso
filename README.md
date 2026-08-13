@@ -7,7 +7,7 @@ The app now has the first real synced build path:
 - Test the working Windows prototype first.
 - Install the app privately on two iPhones.
 - Show a Distance widget on the Home Screen and Lock Screen.
-- Show a Partner Photo widget that reads the latest cached synced photo, with a bundled fallback image.
+- Show a Partner Photo widget that reads the latest cached synced photo, with a friendly empty state before one arrives.
 - Keep both widgets in one WidgetKit extension.
 - Use Supabase for accounts, pairing, live distance rows, and temporary partner-photo transfer storage.
 

@@ -1,23 +1,111 @@
 import Foundation
 import SwiftUI
 
-enum TogetherDemo {
-    static let coupleName = "Sohaib + Fajr"
-    static let distanceText = "7,846 mi apart"
-    static let appGroupIdentifier = "group.com.sohaib.together"
-    static let demoCacheKey = "together.phase1.demoCache"
-    static let liveDistanceTextKey = "together.live.distanceText"
-    static let liveDistanceMilesKey = "together.live.distanceMiles"
-    static let liveDistanceUpdatedAtKey = "together.live.distanceUpdatedAt"
-    static let partnerPhotoDataKey = "together.partnerPhoto.data"
-    static let partnerPhotoIdKey = "together.partnerPhoto.id"
-    static let partnerPhotoSenderKey = "together.partnerPhoto.sender"
-    static let partnerPhotoUpdatedAtKey = "together.partnerPhoto.updatedAt"
-    static let partnerPhotoSavedToPhotosIdKey = "together.partnerPhoto.savedToPhotosId"
-    static let partnerPhotoFileName = "latest-partner-photo.jpg"
+enum TogetherPairingCacheStatus: String, Codable, Sendable {
+    case signedOut
+    case unpaired
+    case pending
+    case paired
+}
 
-    static let testPhotoBase64 =
-        "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAL2SURBVGhD1dhvi01RFAbw/Xl8gPkWIsmcs7YkiSRJksaYMcbMnXvn/ptJkiTSJJEkSZJEkjRJkkhCJEmSJJEenhe7tF6cs/acc0/nvnhezlq/58XMnL0c/CL++EX89gv45Rfw0y/gh+/ju+/jm+/jq+/ji+/js+/hk+/ho+/hg+/hve/ine/irXTxWjp4JR28lA5eSAfPpYNn0sZTaeOJtPFY2ngk81iWeTyUeTyQFu5LC/ekhbvSwh1p4bY0cUuauClN3JAmrsscrskcrqZzuJI2cDlt4FLawMW0gQtpA+fTWZxLZ+GGGb/EAsOMP8sCw4w/k87ADTP+NAsMM/4UC5SJH1k1Yk4Z+JPpEbgy8BoXkyL4EyxQBK8xRbIS/HEWqAM+JBZ/LJ2Gqws+JAZ/lAXqhA+x4hdZIAZf9BfWGiu+nx6Gqxs+xILvsoAVH/t3vmgs+DYLWPH8D6uXDDIWfIsFrHh+HugleLNcWvRsC77JAlY8v230Eo0oEj3bgm8kU3BWPD/M9BKNKBI924KfYQErnl+VeolGFImebcFPs4AVz0/iQeEZXcCCn2KBleAHUULPtuAnk0NwFnx4jOglGlEkerYFP8ECVjxfUnqJRhSJnm3Bj7OAFc9noF6iEUWiZ1vwY8kknBXPN6xeUlYJPZOx4PezgBXPN6xeUkYJPSvEgt/HAlZ8eIDrRYMoYMXvZYEYPB/getlKi+if/T9W/B4WiMGH64FeWGZi8LuTCbhYPK8HemmZicHvYoFYfDh96MVlJBa/kwXqgg+Jwe9ggTrhQ6z47clBuLrhQyz4bSxQR3xIHn4rC9QVH5KF35KMw+XheavUQ6tMFn4zC+TheavUQ6tMFn4TC+TheWjVQ6tMFn4jC9QZz2ThhQWy8OFKrIdWmSx8MnoALg/PK7EeWmWy8BtYIA/PK7EeWmWy8OtZIA/PK7EeWmWy8OtYIA8frsR6cBXJw68dHYOz4MOhVS8YZCz4NSxgxYdbpV40iFjxq/8V+Au3QKkAYxRuuQAAAABJRU5ErkJggg=="
+enum TogetherDistanceOrigin: String, Codable, Sendable {
+    case live
+    case developerOverride
+}
+
+enum TogetherDistanceFreshness: Equatable, Sendable {
+    case fresh
+    case aging
+    case stale
+    case missing
+    case offlineCached
+}
+
+struct TogetherDistancePresentation: Codable, Equatable, Sendable {
+    let miles: Double
+    let sourceUpdatedAt: Date
+    let cachedAt: Date
+    let origin: TogetherDistanceOrigin
+}
+
+struct TogetherCachedPhotoReference: Codable, Equatable, Sendable {
+    let photoId: UUID
+    let fileName: String
+    let updatedAt: Date
+}
+
+struct CoupleWidgetState: Codable, Equatable, Sendable {
+    static let currentSchemaVersion = 1
+
+    let schemaVersion: Int
+    var accountId: UUID?
+    var coupleId: UUID?
+    var pairingStatus: TogetherPairingCacheStatus
+    var partnerDisplayName: String?
+    var distance: TogetherDistancePresentation?
+    var localDistanceOverride: TogetherDistancePresentation?
+    var partnerPhoto: TogetherCachedPhotoReference?
+    var lastSuccessfulSync: Date?
+    var isOffline: Bool
+
+    static var signedOut: CoupleWidgetState {
+        CoupleWidgetState(
+            schemaVersion: currentSchemaVersion,
+            accountId: nil,
+            coupleId: nil,
+            pairingStatus: .signedOut,
+            partnerDisplayName: nil,
+            distance: nil,
+            localDistanceOverride: nil,
+            partnerPhoto: nil,
+            lastSuccessfulSync: nil,
+            isOffline: false
+        )
+    }
+
+    var effectiveDistance: TogetherDistancePresentation? {
+        localDistanceOverride ?? distance
+    }
+
+    func distanceFreshness(at now: Date = Date()) -> TogetherDistanceFreshness {
+        guard pairingStatus == .paired, let effectiveDistance else {
+            return .missing
+        }
+        if isOffline, effectiveDistance.origin == .live {
+            return .offlineCached
+        }
+
+        let age = max(0, now.timeIntervalSince(effectiveDistance.sourceUpdatedAt))
+        if age < 30 * 60 {
+            return .fresh
+        }
+        if age < 6 * 60 * 60 {
+            return .aging
+        }
+        return .stale
+    }
+
+    func nextRefreshDate(after now: Date = Date()) -> Date {
+        guard let effectiveDistance, effectiveDistance.origin == .live else {
+            return now.addingTimeInterval(30 * 60)
+        }
+
+        let freshBoundary = effectiveDistance.sourceUpdatedAt.addingTimeInterval(30 * 60)
+        if now < freshBoundary {
+            return freshBoundary
+        }
+        let staleBoundary = effectiveDistance.sourceUpdatedAt.addingTimeInterval(6 * 60 * 60)
+        if now < staleBoundary {
+            return staleBoundary
+        }
+        return now.addingTimeInterval(30 * 60)
+    }
+}
+
+enum CoupleWidgetCache {
+    static let appGroupIdentifier = "group.com.sohaib.together"
+    private static let stateKey = "together.widget-state.v1"
+    private static let photoPrefix = "partner-photo-"
 
     static func sharedDefaults() -> UserDefaults? {
         UserDefaults(suiteName: appGroupIdentifier)
@@ -27,164 +115,175 @@ enum TogetherDemo {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
     }
 
-    static func writeDemoCache() -> Bool {
-        guard let defaults = sharedDefaults() else {
-            return false
-        }
-
-        defaults.set(Date().timeIntervalSince1970, forKey: demoCacheKey)
-        return defaults.synchronize()
-    }
-
-    static func cachedDemoDate() -> Date? {
-        guard let value = sharedDefaults()?.double(forKey: demoCacheKey), value > 0 else {
+    static func load() -> CoupleWidgetState? {
+        guard
+            let data = sharedDefaults()?.data(forKey: stateKey),
+            let state = try? decoder.decode(CoupleWidgetState.self, from: data),
+            state.schemaVersion == CoupleWidgetState.currentSchemaVersion
+        else {
             return nil
         }
-
-        return Date(timeIntervalSince1970: value)
+        return state
     }
 
-    static func writeLiveDistance(distanceText: String, miles: Double, updatedAt: Date) -> Bool {
-        guard let defaults = sharedDefaults() else {
-            return false
-        }
-
-        defaults.set(distanceText, forKey: liveDistanceTextKey)
-        defaults.set(miles, forKey: liveDistanceMilesKey)
-        defaults.set(updatedAt.timeIntervalSince1970, forKey: liveDistanceUpdatedAtKey)
-        return defaults.synchronize()
-    }
-
-    static func liveDistance() -> TogetherDistanceSnapshot {
-        guard let defaults = sharedDefaults() else {
-            return TogetherDistanceSnapshot(text: distanceText, miles: nil, updatedAt: nil, isLive: false)
-        }
-
-        let text = defaults.string(forKey: liveDistanceTextKey) ?? distanceText
-        let updatedAtValue = defaults.double(forKey: liveDistanceUpdatedAtKey)
-        let milesValue = defaults.double(forKey: liveDistanceMilesKey)
-        return TogetherDistanceSnapshot(
-            text: text,
-            miles: milesValue > 0 ? milesValue : nil,
-            updatedAt: updatedAtValue > 0 ? Date(timeIntervalSince1970: updatedAtValue) : nil,
-            isLive: updatedAtValue > 0
-        )
-    }
-
-    static func formattedDistance(miles: Double) -> String {
-        if miles < 0.1 {
-            return "less than 0.1 mi apart"
-        }
-
-        if miles < 10 {
-            return "\(String(format: "%.1f", miles)) mi apart"
-        }
-
-        return "\(Int(miles.rounded()).formatted()) mi apart"
-    }
-
-    static func writePartnerPhoto(data: Data, photoId: UUID, senderUserId: UUID, updatedAt: Date) -> Bool {
+    @discardableResult
+    static func write(_ state: CoupleWidgetState) -> Bool {
         guard
+            state.schemaVersion == CoupleWidgetState.currentSchemaVersion,
             let defaults = sharedDefaults(),
-            let photoURL = sharedContainerURL()?.appendingPathComponent(partnerPhotoFileName)
+            let data = try? encoder.encode(state)
         else {
             return false
         }
+        defaults.set(data, forKey: stateKey)
+        return defaults.synchronize()
+    }
 
+    static func photoData(for state: CoupleWidgetState? = load()) -> Data? {
+        guard
+            let reference = state?.partnerPhoto,
+            reference.fileName == URL(fileURLWithPath: reference.fileName).lastPathComponent,
+            reference.fileName.hasPrefix(photoPrefix),
+            let container = sharedContainerURL()
+        else {
+            return nil
+        }
+        return try? Data(contentsOf: container.appendingPathComponent(reference.fileName))
+    }
+
+    @discardableResult
+    static func replacePartnerPhoto(
+        data: Data,
+        photoId: UUID,
+        updatedAt: Date,
+        in state: CoupleWidgetState
+    ) -> CoupleWidgetState? {
+        guard !data.isEmpty, let container = sharedContainerURL() else {
+            return nil
+        }
+
+        let finalName = "\(photoPrefix)\(photoId.uuidString.lowercased()).jpg"
+        let finalURL = container.appendingPathComponent(finalName)
+        let stagingURL = container.appendingPathComponent(".\(finalName).\(UUID().uuidString).tmp")
+        var backupDirectory: URL?
         do {
-            try data.write(to: photoURL, options: .atomic)
+            try data.write(to: stagingURL, options: [.atomic])
+            guard (try stagingURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            if FileManager.default.fileExists(atPath: finalURL.path) {
+                let replacementDirectory = container.appendingPathComponent(
+                    ".partner-photo-backup-\(UUID().uuidString)",
+                    isDirectory: true
+                )
+                try FileManager.default.createDirectory(at: replacementDirectory, withIntermediateDirectories: false)
+                backupDirectory = replacementDirectory
+                let backupURL = replacementDirectory.appendingPathComponent(finalName)
+                try FileManager.default.moveItem(at: finalURL, to: backupURL)
+                do {
+                    try FileManager.default.moveItem(at: stagingURL, to: finalURL)
+                } catch {
+                    try? FileManager.default.moveItem(at: backupURL, to: finalURL)
+                    throw error
+                }
+                try? FileManager.default.removeItem(at: replacementDirectory)
+                backupDirectory = nil
+            } else {
+                try FileManager.default.moveItem(at: stagingURL, to: finalURL)
+            }
+
+            var updatedState = state
+            let oldReference = updatedState.partnerPhoto
+            updatedState.partnerPhoto = TogetherCachedPhotoReference(
+                photoId: photoId,
+                fileName: finalName,
+                updatedAt: updatedAt
+            )
+            guard write(updatedState) else {
+                try? FileManager.default.removeItem(at: finalURL)
+                return nil
+            }
+            if let oldReference, oldReference.fileName != finalName {
+                try? FileManager.default.removeItem(at: container.appendingPathComponent(oldReference.fileName))
+            }
+            return updatedState
         } catch {
-            return false
+            try? FileManager.default.removeItem(at: stagingURL)
+            if let backupDirectory {
+                try? FileManager.default.removeItem(at: backupDirectory)
+            }
+            return nil
         }
-
-        defaults.removeObject(forKey: partnerPhotoDataKey)
-        defaults.set(photoId.uuidString, forKey: partnerPhotoIdKey)
-        defaults.set(senderUserId.uuidString, forKey: partnerPhotoSenderKey)
-        defaults.set(updatedAt.timeIntervalSince1970, forKey: partnerPhotoUpdatedAtKey)
-        return defaults.synchronize()
     }
 
-    static func partnerPhoto() -> TogetherPartnerPhotoSnapshot {
-        guard let defaults = sharedDefaults() else {
-            return TogetherPartnerPhotoSnapshot(data: nil, photoId: nil, senderUserId: nil, updatedAt: nil)
+    @discardableResult
+    static func clearPartnerPhoto(in state: CoupleWidgetState) -> CoupleWidgetState {
+        var updatedState = state
+        let oldReference = updatedState.partnerPhoto
+        updatedState.partnerPhoto = nil
+        guard write(updatedState) else {
+            return state
         }
-
-        let updatedAtValue = defaults.double(forKey: partnerPhotoUpdatedAtKey)
-        let fileData = sharedContainerURL()
-            .map { $0.appendingPathComponent(partnerPhotoFileName) }
-            .flatMap { try? Data(contentsOf: $0) }
-
-        return TogetherPartnerPhotoSnapshot(
-            data: fileData ?? defaults.data(forKey: partnerPhotoDataKey),
-            photoId: (defaults.string(forKey: partnerPhotoIdKey)).flatMap(UUID.init(uuidString:)),
-            senderUserId: (defaults.string(forKey: partnerPhotoSenderKey)).flatMap(UUID.init(uuidString:)),
-            updatedAt: updatedAtValue > 0 ? Date(timeIntervalSince1970: updatedAtValue) : nil
-        )
-    }
-
-    static func lastSavedPartnerPhotoId() -> UUID? {
-        (sharedDefaults()?.string(forKey: partnerPhotoSavedToPhotosIdKey)).flatMap(UUID.init(uuidString:))
-    }
-
-    static func markPartnerPhotoSavedToPhotos(photoId: UUID) -> Bool {
-        guard let defaults = sharedDefaults() else {
-            return false
+        if let oldReference, let container = sharedContainerURL() {
+            try? FileManager.default.removeItem(at: container.appendingPathComponent(oldReference.fileName))
         }
-
-        defaults.set(photoId.uuidString, forKey: partnerPhotoSavedToPhotosIdKey)
-        return defaults.synchronize()
+        return updatedState
     }
+
+    static func clear() {
+        sharedDefaults()?.removeObject(forKey: stateKey)
+        guard
+            let container = sharedContainerURL(),
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: container,
+                includingPropertiesForKeys: nil
+            )
+        else {
+            return
+        }
+        for file in files where file.lastPathComponent.hasPrefix(photoPrefix) || file.lastPathComponent.hasPrefix(".\(photoPrefix)") {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        return encoder
+    }()
+
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        return decoder
+    }()
 }
 
-struct TogetherDistanceSnapshot {
-    let text: String
-    let miles: Double?
-    let updatedAt: Date?
-    let isLive: Bool
-
-    var lockCircleValue: String {
-        guard let miles else {
-            return "7,846"
+enum TogetherDistanceFormatter {
+    static func text(miles: Double) -> String {
+        guard miles.isFinite, miles >= 0 else {
+            return "Distance unavailable"
         }
-
+        if miles < 0.1 {
+            return "Less than 0.1 mi apart"
+        }
         if miles < 10 {
-            return String(format: "%.1f", miles)
+            return "\(String(format: "%.1f", miles)) mi apart"
         }
-
-        return Int(miles.rounded()).formatted()
+        return "\(Int(miles.rounded()).formatted()) mi apart"
     }
 
-    var statusText: String {
-        guard let updatedAt else {
-            return "Phase 1 test"
-        }
-
-        let minutes = max(0, Int(Date().timeIntervalSince(updatedAt) / 60))
-        if minutes < 1 {
-            return "Updated just now"
-        }
-
-        return "Updated \(minutes) min ago"
+    static func compactValue(miles: Double) -> String {
+        miles < 10 ? String(format: "%.1f", miles) : Int(miles.rounded()).formatted()
     }
-}
 
-struct TogetherPartnerPhotoSnapshot {
-    let data: Data?
-    let photoId: UUID?
-    let senderUserId: UUID?
-    let updatedAt: Date?
-
-    var statusText: String {
-        guard let updatedAt else {
-            return "Test Photo"
-        }
-
-        let minutes = max(0, Int(Date().timeIntervalSince(updatedAt) / 60))
-        if minutes < 1 {
-            return "Updated just now"
-        }
-
-        return "Updated \(minutes) min ago"
+    static func ageText(since date: Date, now: Date = Date()) -> String {
+        let minutes = max(0, Int(now.timeIntervalSince(date) / 60))
+        if minutes < 1 { return "Updated just now" }
+        if minutes < 60 { return "Updated \(minutes)m ago" }
+        let hours = minutes / 60
+        if hours < 24 { return "Updated \(hours)h ago" }
+        return "Updated \(hours / 24)d ago"
     }
 }
 
@@ -195,8 +294,8 @@ struct TogetherCardBackground: ViewModifier {
             .containerBackground(for: .widget) {
                 LinearGradient(
                     colors: [
-                        Color(red: 0.12, green: 0.10, blue: 0.13),
-                        Color(red: 0.25, green: 0.20, blue: 0.24)
+                        Color(red: 0.97, green: 0.95, blue: 1.0),
+                        Color(red: 0.88, green: 0.82, blue: 0.97)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -210,4 +309,3 @@ extension View {
         modifier(TogetherCardBackground())
     }
 }
-

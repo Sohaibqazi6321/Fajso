@@ -1,184 +1,147 @@
-import Photos
 import PhotosUI
 import SwiftUI
 import UIKit
-import WidgetKit
 
 struct PartnerPhotoView: View {
     @ObservedObject var supabaseService: TogetherSupabaseService
     @State private var selectedItem: PhotosPickerItem?
     @State private var showingCamera = false
     @State private var isBusy = false
-    @State private var snapshot = TogetherDemo.partnerPhoto()
-
-    private let refreshTimer = Timer.publish(every: 75, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Partner Photo")
-                    .font(.largeTitle.bold())
+        ZStack {
+            TogetherPalette.background.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    photoView
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
 
-                photoView
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Text(photoCaption)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
 
-                Text(snapshot.statusText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                VStack(spacing: 12) {
                     Button {
                         takePicture()
                     } label: {
-                        Label("Take Picture", systemImage: "camera.fill")
+                        Label("Take a photo", systemImage: "camera.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isBusy)
 
                     PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                        Label("Upload Photo", systemImage: "photo.on.rectangle")
+                        Label("Choose a photo", systemImage: "photo.on.rectangle")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .disabled(isBusy)
 
                     Button {
-                        Task {
-                            await refresh()
-                        }
+                        Task { await refresh() }
                     } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
+                        Label("Refresh partner photo", systemImage: "arrow.clockwise")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .disabled(isBusy)
-                }
 
-                Text(supabaseService.photoStatusText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    if !supabaseService.photoStatusText.isEmpty {
+                        Text(supabaseService.photoStatusText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(22)
             }
-            .padding(24)
         }
         .navigationTitle("Partner Photo")
         .navigationBarTitleDisplayMode(.inline)
+        .tint(TogetherPalette.accent)
         .sheet(isPresented: $showingCamera) {
             CameraPicker { image in
                 showingCamera = false
-                guard let image else {
-                    return
-                }
-
-                Task {
-                    await upload(image)
-                }
+                guard let image else { return }
+                Task { await upload(image) }
             }
             .ignoresSafeArea()
         }
         .onChange(of: selectedItem) { _, item in
-            guard let item else {
-                return
-            }
-
+            guard let item else { return }
             Task {
                 await upload(item)
                 selectedItem = nil
             }
         }
-        .task {
-            await refresh()
-        }
-        .onReceive(refreshTimer) { _ in
-            guard !isBusy else {
-                return
-            }
-
-            Task {
-                await refresh()
-            }
-        }
+        .task { await refresh() }
     }
 
     @ViewBuilder
     private var photoView: some View {
-        if let image = snapshot.image {
+        if
+            let data = CoupleWidgetCache.photoData(for: supabaseService.widgetState),
+            let image = UIImage(data: data)
+        {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
         } else {
-            fallbackImage
-                .resizable()
-                .scaledToFill()
+            ZStack {
+                TogetherPalette.lavender.opacity(0.7)
+                VStack(spacing: 10) {
+                    Image(systemName: "heart.text.square.fill")
+                        .font(.system(size: 48))
+                    Text("Waiting for a photo")
+                        .font(.headline)
+                }
+                .foregroundStyle(TogetherPalette.accent)
+            }
         }
     }
 
-    private var fallbackImage: Image {
-        guard
-            let data = Data(base64Encoded: TogetherDemo.testPhotoBase64),
-            let image = UIImage(data: data)
-        else {
-            return Image(systemName: "person.crop.square.fill")
+    private var photoCaption: String {
+        guard let reference = supabaseService.widgetState.partnerPhoto else {
+            return "A photo from your partner will stay here and in the widget, even while offline."
         }
-
-        return Image(uiImage: image)
+        return TogetherDistanceFormatter.ageText(since: reference.updatedAt)
     }
 
     private func takePicture() {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            supabaseService.setPhotoStatus("Camera is not available on this device.")
+            supabaseService.setPhotoStatus("Camera isn't available on this device.")
             return
         }
-
         showingCamera = true
     }
 
     private func upload(_ item: PhotosPickerItem) async {
         isBusy = true
         defer { isBusy = false }
-
         do {
             guard
                 let data = try await item.loadTransferable(type: Data.self),
                 let image = UIImage(data: data)
             else {
-                supabaseService.setPhotoStatus("Could not read that photo.")
+                supabaseService.setPhotoStatus("That photo couldn't be read.")
                 return
             }
-
-            await upload(image)
+            _ = await supabaseService.uploadPartnerPhoto(image: image)
         } catch {
-            supabaseService.setPhotoStatus("Photo upload failed: \(error.localizedDescription)")
+            supabaseService.setPhotoStatus("That photo couldn't be read. Try another one.")
         }
     }
 
     private func upload(_ image: UIImage) async {
         isBusy = true
         defer { isBusy = false }
-
-        if await supabaseService.uploadPartnerPhoto(image: image) != nil {
-            await refresh()
-        }
+        _ = await supabaseService.uploadPartnerPhoto(image: image)
     }
 
     private func refresh() async {
+        guard !isBusy else { return }
         isBusy = true
         defer { isBusy = false }
-
-        if let latest = await supabaseService.refreshLatestPartnerPhoto() {
-            snapshot = latest
-        } else {
-            snapshot = TogetherDemo.partnerPhoto()
-        }
-
-        WidgetCenter.shared.reloadTimelines(ofKind: "TogetherPartnerPhotoWidget")
-    }
-}
-
-private extension TogetherPartnerPhotoSnapshot {
-    var image: UIImage? {
-        data.flatMap(UIImage.init(data:))
+        await supabaseService.refreshLatestPartnerPhoto()
     }
 }

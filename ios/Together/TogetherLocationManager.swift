@@ -23,10 +23,6 @@ final class TogetherLocationManager: NSObject, ObservableObject {
         manager.requestWhenInUseAuthorization()
     }
 
-    func requestBackgroundPermission() {
-        manager.requestAlwaysAuthorization()
-    }
-
     func requestOneUpdate() {
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
@@ -42,24 +38,8 @@ final class TogetherLocationManager: NSObject, ObservableObject {
         }
     }
 
-    func startEfficientUpdates() {
-        switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse:
-            statusText = "Listening for meaningful location changes."
-            manager.startMonitoringSignificantLocationChanges()
-        case .notDetermined:
-            statusText = "Location permission needed."
-            manager.requestWhenInUseAuthorization()
-        case .denied, .restricted:
-            statusText = "Location permission is blocked in Settings."
-        @unknown default:
-            statusText = "Location permission state is unknown."
-        }
-    }
-
     func stopUpdates() {
         manager.stopUpdatingLocation()
-        manager.stopMonitoringSignificantLocationChanges()
         statusText = "Location updates stopped."
     }
 }
@@ -69,8 +49,12 @@ extension TogetherLocationManager: CLLocationManagerDelegate {
         Task { @MainActor in
             authorizationStatus = manager.authorizationStatus
             switch manager.authorizationStatus {
-            case .authorizedAlways, .authorizedWhenInUse:
+            case .authorizedAlways:
                 statusText = "Location permission allowed."
+                manager.requestLocation()
+            case .authorizedWhenInUse:
+                statusText = "Location allowed while Together is open."
+                manager.requestLocation()
             case .denied, .restricted:
                 statusText = "Location permission is blocked in Settings."
             case .notDetermined:
@@ -82,7 +66,20 @@ extension TogetherLocationManager: CLLocationManagerDelegate {
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else {
+        let now = Date()
+        guard let location = locations
+            .filter({ location in
+                CLLocationCoordinate2DIsValid(location.coordinate)
+                    && location.horizontalAccuracy >= 0
+                    && location.horizontalAccuracy <= 20_000
+                    && location.timestamp <= now.addingTimeInterval(60)
+                    && location.timestamp >= now.addingTimeInterval(-5 * 60)
+            })
+            .max(by: { $0.timestamp < $1.timestamp })
+        else {
+            Task { @MainActor in
+                statusText = "Location reading was too old or inaccurate."
+            }
             return
         }
 
@@ -94,7 +91,11 @@ extension TogetherLocationManager: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in
-            statusText = "Location failed: \(error.localizedDescription)"
+            if let locationError = error as? CLError, locationError.code == .denied {
+                statusText = "Location permission is blocked in Settings."
+            } else {
+                statusText = "We couldn't update your location right now."
+            }
         }
     }
 }
