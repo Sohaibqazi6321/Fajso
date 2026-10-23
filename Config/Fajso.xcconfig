@@ -1,0 +1,12 @@
+// Shared build settings for the app and the widget extension.
+//
+// The Supabase publishable key is designed to ship inside apps: row-level
+// security in supabase/migrations is what protects the data. Never put the
+// service_role key here.
+//
+// The host has no scheme because "//" starts a comment in .xcconfig files.
+// FajsoConfig adds "https://".
+
+SUPABASE_HOST = lwiedqlmzddwxhivubfa.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_nLn946D4UMse-sbId-axlQ_Q3-0WxMC
+FAJSO_APP_GROUP = group.com.sohaib.fajso

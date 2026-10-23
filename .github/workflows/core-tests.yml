@@ -1,0 +1,17 @@
+name: Core tests (Linux)
+
+# Pure-Swift logic in Shared/Core is tested on a cheap Linux runner on every
+# push. These tests can also be run on Windows with `swift test`.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test

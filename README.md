@@ -1,29 +1,22 @@
-# Together
+# Fajso 💛
 
-Together is a private iPhone app for Sohaib and Fajr.
+A private iPhone app for Sohaib & Fajr: how far apart you are, on the Lock Screen, and each other's latest photo, on the Home Screen.
 
-The app now has the first real synced build path:
+Built on Windows with no Mac and no paid accounts:
 
-- Test the working Windows prototype first.
-- Install the app privately on two iPhones.
-- Show a Distance widget on the Home Screen and Lock Screen.
-- Show a Partner Photo widget that reads the latest cached synced photo, with a bundled fallback image.
-- Keep both widgets in one WidgetKit extension.
-- Use Supabase for accounts, pairing, live distance rows, and temporary partner-photo transfer storage.
+1. Write Swift on Windows.
+2. GitHub Actions (macOS) builds `Fajso.ipa`. Go to **Actions → iOS build → Run workflow**, then download the `Fajso-ipa` artifact.
+3. Sideload the IPA with Sideloadly or AltStore using a free Apple ID, and refresh it every 7 days.
 
-The project is currently prepared for a Windows-first workflow. Most source edits can happen here, GitHub Actions checks the iOS build on macOS, and SideStore/Xcode handles signed device installs.
+Pure logic in `Shared/Core` is tested with `swift test`, on Linux CI or on Windows with the Swift toolchain.
 
-Start here:
+Design docs, roadmap and decisions live in the Obsidian vault (`OneDrive/Documents/Fajso`). Notes for coding agents are in [CLAUDE.md](CLAUDE.md).
 
-- [Windows browser preview](preview/together-preview.html)
-- [Supabase setup](docs/supabase-setup.md)
-- [GitHub Actions build](docs/github-actions-build.md)
-- [Windows-first workflow](docs/windows-first-workflow.md)
-- [Phase 1 sideloading test](docs/phase-1-sideloading.md)
-- [Xcode setup](docs/xcode-setup.md)
+## Status: Phase 0 (prove the pipeline)
+Install the build on both phones, add both widgets, then open **Diagnostics** in the app:
+- **App Group: Available** plus **Widget wrote: ✓** means app ↔ widget sharing works on free signing.
+- **Widget network: OK** means widgets can fetch from Supabase by themselves.
 
-Before Apple ID signing or sideloading, open `preview/together-preview.html` in a browser on Windows. That prototype lets you test two-person views, distance calculation, small messages, photo selection, and widget previews without using a sideload slot.
+The widgets show the same results as `AG ✓/✗` and `NET ✓/✗`.
 
-Preferred Windows-first route: push this repo to a private GitHub repo and run the `iOS unsigned IPA` workflow to produce `Together-unsigned.ipa` for SideStore testing.
-
-If GitHub Actions or SideStore packaging hits a wall, use your friend's Mac. If the Mac can install XcodeGen, use `project.yml` to generate the Xcode project automatically. If not, create the Xcode project manually with the setup guide.
+The backend schema (`supabase/migrations`) comes from the earlier "Together" prototype and is already deployed.

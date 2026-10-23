@@ -1,16 +1,17 @@
-name: iOS unsigned IPA
+name: iOS build (IPA for sideloading)
 
+# macOS minutes cost 10x on private repos (~200 free per month), so this
+# only runs when started by hand or when a v* tag is pushed.
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "**"
-  pull_request:
+    tags: ["v*"]
 
 jobs:
   build:
-    name: Build Together
-    runs-on: macos-latest
+    name: Build Fajso.ipa
+    runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -29,12 +30,12 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build unsigned app
+      - name: Build app without signing
         run: |
           set -o pipefail
           xcodebuild \
-            -project Together.xcodeproj \
-            -scheme Together \
+            -project Fajso.xcodeproj \
+            -scheme Fajso \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build/DerivedData \
@@ -43,34 +44,42 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             clean build | tee xcodebuild.log
 
-      - name: Package unsigned IPA
+      # An unsigned build carries no entitlements, so sideloading tools never
+      # learn that the app and widget share an App Group. Ad-hoc signing with
+      # the entitlements embeds them; Sideloadly/AltStore read them when they
+      # re-sign with a free Apple ID.
+      - name: Embed entitlements (ad-hoc signature)
         run: |
-          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Together.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "Together.app was not found at $APP_PATH"
-            find build/DerivedData/Build/Products -maxdepth 3 -type d -name "*.app" -print || true
-            exit 1
-          fi
+          APP="build/DerivedData/Build/Products/Release-iphoneos/Fajso.app"
+          APPEX="$APP/PlugIns/FajsoWidgets.appex"
+          test -d "$APP" || { echo "Fajso.app not found"; exit 1; }
+          test -d "$APPEX" || { echo "FajsoWidgets.appex not embedded"; exit 1; }
+          codesign --force --sign - --entitlements Widgets/FajsoWidgets.entitlements "$APPEX"
+          codesign --force --sign - --entitlements App/Fajso.entitlements "$APP"
+          echo "App entitlements:"; codesign -d --entitlements - "$APP"
+          echo "Widget entitlements:"; codesign -d --entitlements - "$APPEX"
 
+      - name: Package IPA
+        run: |
+          APP="build/DerivedData/Build/Products/Release-iphoneos/Fajso.app"
           rm -rf build/ipa
           mkdir -p build/ipa/Payload
-          cp -R "$APP_PATH" build/ipa/Payload/Together.app
-          ditto -c -k --keepParent build/ipa/Payload Together-unsigned.ipa
+          cp -R "$APP" build/ipa/Payload/Fajso.app
+          (cd build/ipa && zip -qry ../../Fajso.ipa Payload)
+          ls -lh Fajso.ipa
 
-      - name: Upload unsigned IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Together-unsigned-ipa
-          path: Together-unsigned.ipa
+          name: Fajso-ipa
+          path: Fajso.ipa
           if-no-files-found: error
+          retention-days: 14
 
-      - name: Upload build diagnostics
+      - name: Upload build log
         uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: Together-build-diagnostics
-          path: |
-            xcodebuild.log
-            Together.xcodeproj
+          name: Fajso-build-log
+          path: xcodebuild.log
           if-no-files-found: warn
-
